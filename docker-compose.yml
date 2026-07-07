@@ -1,6 +1,22 @@
 name: ai-security-lab
 
 services:
+  security-app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: lab-security-app
+    restart: unless-stopped
+    environment:
+      APP_REPO_ROOT: /workspace
+    ports:
+      - "${SECURITY_APP_BIND:-127.0.0.1}:${SECURITY_APP_PORT:-8000}:8000"
+    networks:
+      - lab_net
+    depends_on:
+      - juice-shop
+      - dvwa
+
   juice-shop:
     image: bkimminich/juice-shop:latest
     container_name: lab-juice-shop

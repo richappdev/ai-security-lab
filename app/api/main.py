@@ -1,0 +1,51 @@
+"""FastAPI entrypoint for the local security app."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any
+
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
+
+from app.api.service import DEFAULT_OPERATOR, DEFAULT_TIMEOUT_SECONDS, default_repo_root, run_passive_header_scan
+
+
+def configured_repo_root() -> Path:
+    return Path(os.environ.get("APP_REPO_ROOT", default_repo_root())).resolve()
+
+
+class HeaderScanRequest(BaseModel):
+    target: str = Field(..., examples=["http://127.0.0.1:3000"])
+    operator: str = Field(DEFAULT_OPERATOR, min_length=1)
+    run_id: str | None = None
+    timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
+
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+
+
+app = FastAPI(
+    title="AI Security Lab API",
+    version="0.1.0",
+    description="Local-only API for guarded security lab tools.",
+)
+
+
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="ok", service="security-app")
+
+
+@app.post("/scan/passive/headers")
+def scan_passive_headers(request: HeaderScanRequest) -> dict[str, Any]:
+    return run_passive_header_scan(
+        target=request.target,
+        operator=request.operator,
+        run_id=request.run_id,
+        timeout_seconds=request.timeout_seconds,
+        repo_root=configured_repo_root(),
+    )

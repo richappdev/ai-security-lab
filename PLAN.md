@@ -21,6 +21,7 @@ Build a local, repeatable, and legally safe testing environment for developing a
 Completed:
 
 - Lab target compose stack and lifecycle scripts.
+- `security-app` FastAPI skeleton with health check and passive headers endpoint.
 - `targets.allowlist` as the source of truth for approved lab targets.
 - `safety/scope_guard.py` for exact allowlist validation and local-lab host enforcement.
 - `safety/audit_log.py` for append-only JSONL audit records.
@@ -29,8 +30,6 @@ Completed:
 
 Not started:
 
-- `security-app` service skeleton.
-- Passive scanner API endpoint.
 - SQLite-backed audit storage.
 - Report generation.
 - Active checks.
@@ -133,13 +132,11 @@ These must run only in a separate isolated lab profile with stricter limits and 
 
 ## Next Milestones
 
-1. Add a `security-app` FastAPI skeleton that calls existing guarded tools.
-2. Add a passive scanner endpoint for `inspect_headers`.
-3. Add a simple report writer under `reports/`.
-4. Expand passive tools with cookie inspection and form discovery.
-5. Move audit logging to SQLite when queryability is needed.
-6. Add one safe DVWA/Juice Shop active check after human review.
-7. Add Redis/Celery only after background jobs are needed.
+1. Add a simple report writer under `reports/`.
+2. Expand passive tools with cookie inspection and form discovery.
+3. Move audit logging to SQLite when queryability is needed.
+4. Add one safe DVWA/Juice Shop active check after human review.
+5. Add Redis/Celery only after background jobs are needed.
 
 ## Operating Commands
 

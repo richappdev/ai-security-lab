@@ -29,6 +29,7 @@ For AI-agent operation, start with:
 
 - OWASP Juice Shop at `http://127.0.0.1:3000`
 - DVWA at `http://127.0.0.1:8080`
+- Security app API at `http://127.0.0.1:8000`
 
 Both services are placed on a Docker bridge network named `ai-security-lab-net`. Host access is limited to localhost ports through the compose port bindings.
 
@@ -79,6 +80,7 @@ python -m unittest discover -s tests
 
 ## Current Implementation
 
+- `app/api/main.py` exposes the local FastAPI skeleton and passive headers endpoint.
 - `safety/scope_guard.py` enforces exact allowlist matching and local-lab host constraints before tool network access.
 - `safety/audit_log.py` writes append-only JSONL audit records under `logs/`.
 - `tools/passive/headers.py` implements the first passive tool, `inspect_headers`.
