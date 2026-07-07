@@ -1,0 +1,29 @@
+name: ai-security-lab
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    container_name: lab-juice-shop
+    restart: unless-stopped
+    ports:
+      - "${JUICE_SHOP_BIND:-127.0.0.1}:${JUICE_SHOP_PORT:-3000}:3000"
+    networks:
+      lab_net:
+        aliases:
+          - juice-shop.local
+
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    container_name: lab-dvwa
+    restart: unless-stopped
+    ports:
+      - "${DVWA_BIND:-127.0.0.1}:${DVWA_PORT:-8080}:80"
+    networks:
+      lab_net:
+        aliases:
+          - dvwa.local
+
+networks:
+  lab_net:
+    name: ai-security-lab-net
+    driver: bridge

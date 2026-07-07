@@ -1,0 +1,10 @@
+# Only these local lab targets should be used by the attack/testing app.
+# Keep production, public, school, government, and third-party targets out.
+
+http://127.0.0.1:3000
+http://localhost:3000
+http://juice-shop.local:3000
+
+http://127.0.0.1:8080
+http://localhost:8080
+http://dvwa.local
