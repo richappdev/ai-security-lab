@@ -1,0 +1,42 @@
+version: 1
+
+tools:
+  - name: inspect_headers
+    category: passive
+    risk: passive
+    entrypoint: tools/passive/headers.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Inspect HTTP response headers for common security headers.
+
+  - name: inspect_cookies
+    category: passive
+    risk: passive
+    entrypoint: tools/passive/cookies.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Inspect cookie attributes such as HttpOnly, Secure, and SameSite.
+
+  - name: discover_forms
+    category: passive
+    risk: passive
+    entrypoint: tools/passive/forms.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Discover forms on same-origin pages without submitting payloads.
+
+  - name: lab_xss_reflection_check
+    category: active
+    risk: active-low-risk
+    entrypoint: tools/active/xss_lab_check.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Run a harmless reflected-input check against approved lab targets only.

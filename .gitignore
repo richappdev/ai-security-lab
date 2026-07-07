@@ -4,5 +4,6 @@ Thumbs.db
 
 # Local run artifacts
 logs/
-reports/
+reports/*
+!reports/.gitkeep
 tmp/

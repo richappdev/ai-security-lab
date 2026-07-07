@@ -2,6 +2,29 @@
 
 Local Docker testing environment for security-tool development. This lab is for authorized testing only and should stay bound to localhost by default.
 
+## Repository Layout
+
+```text
+app/       Future local security app code.
+agents/    AI agent prompts, planner logic, and agent instructions.
+docs/      Architecture, runbook, contracts, and safety rules.
+lab/       Lab target notes, future compose overlays, and seed data.
+safety/    Policy and guard code for allowlists, limits, and audit logs.
+scripts/   PowerShell helpers for operating the local lab.
+tools/     Passive and active security tool implementations.
+reports/   Generated scan reports.
+tests/     Safety and tool tests.
+```
+
+For AI-agent operation, start with:
+
+1. `docs/runbook.md`
+2. `docs/safety-rules.md`
+3. `docs/agent-contract.md`
+4. `docs/tool-contract.md`
+5. `tools/manifest.yml`
+6. `safety/policy.yml`
+
 ## Included Targets
 
 - OWASP Juice Shop at `http://127.0.0.1:3000`
@@ -40,6 +63,12 @@ docker compose down
 ```powershell
 docker compose down --volumes
 docker compose up -d
+```
+
+## Validate
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\validate-lab.ps1
 ```
 
 ## Safety Boundary

@@ -1,0 +1,41 @@
+version: 1
+
+scope:
+  allowed_targets_file: targets.allowlist
+  localhost_only_by_default: true
+  deny_public_ips: true
+  deny_private_network_scan: true
+  deny_third_party_domains: true
+
+limits:
+  default_timeout_seconds: 10
+  max_timeout_seconds: 30
+  max_requests_per_minute: 30
+  max_same_origin_pages: 25
+
+allowed_activity:
+  - passive_http_inspection
+  - same_origin_crawl
+  - local_lab_active_checks
+
+blocked_activity:
+  - public_target_testing
+  - credential_stuffing
+  - destructive_exploit
+  - denial_of_service
+  - lateral_movement
+  - data_exfiltration
+
+audit:
+  required: true
+  output_directory: logs
+  fields:
+    - run_id
+    - operator
+    - tool
+    - target
+    - risk
+    - started_at
+    - ended_at
+    - status
+    - result_summary
