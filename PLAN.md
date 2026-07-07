@@ -12,6 +12,28 @@ Build a local, repeatable, and legally safe testing environment for developing a
 - Docker bridge network: `ai-security-lab-net`
 - Local target allowlist: `targets.allowlist`
 - PowerShell helper scripts in `scripts/`
+- Python safety guard for allowlist and local-lab target checks
+- JSONL audit logging under `logs/`
+- First passive tool: `inspect_headers`
+
+## Implementation Status
+
+Completed:
+
+- Lab target compose stack and lifecycle scripts.
+- `targets.allowlist` as the source of truth for approved lab targets.
+- `safety/scope_guard.py` for exact allowlist validation and local-lab host enforcement.
+- `safety/audit_log.py` for append-only JSONL audit records.
+- `tools/passive/headers.py` for passive response header inspection.
+- Unit tests for scope rejection, audit logging, and passive header output shape.
+
+Not started:
+
+- `security-app` service skeleton.
+- Passive scanner API endpoint.
+- SQLite-backed audit storage.
+- Report generation.
+- Active checks.
 
 ## Safety Boundary
 
@@ -111,12 +133,12 @@ These must run only in a separate isolated lab profile with stricter limits and 
 
 ## Next Milestones
 
-1. Add a `security-app` service skeleton.
-2. Implement allowlist loading and URL validation.
-3. Add a passive scanner endpoint.
-4. Add SQLite audit logging.
-5. Add a simple report output folder.
-6. Add one safe DVWA/Juice Shop active check.
+1. Add a `security-app` FastAPI skeleton that calls existing guarded tools.
+2. Add a passive scanner endpoint for `inspect_headers`.
+3. Add a simple report writer under `reports/`.
+4. Expand passive tools with cookie inspection and form discovery.
+5. Move audit logging to SQLite when queryability is needed.
+6. Add one safe DVWA/Juice Shop active check after human review.
 7. Add Redis/Celery only after background jobs are needed.
 
 ## Operating Commands
@@ -126,4 +148,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check-prereqs.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\start-lab.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\stop-lab.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\reset-lab.ps1
+```
+
+## Test Command
+
+```powershell
+python -m unittest discover -s tests
 ```
