@@ -86,8 +86,9 @@ python -m unittest discover -s tests
 - `tools/passive/headers.py` implements passive response header inspection.
 - `tools/passive/cookies.py` implements passive cookie attribute inspection.
 - `tools/passive/forms.py` implements passive same-page form discovery without submitting forms.
+- `tools/active/xss_lab_check.py` implements a harmless reflected-input check for allowlisted lab targets.
 - `reports/writer.py` generates basic Markdown scan reports under `reports/`.
-- `tests/test_safety_and_headers.py` covers scope checks, audit logging, and passive tool output shape.
+- `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, and the first low-risk active check.
 
 ## Safety Boundary
 

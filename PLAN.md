@@ -28,13 +28,15 @@ Completed:
 - `tools/passive/headers.py` for passive response header inspection.
 - `tools/passive/cookies.py` for passive cookie attribute inspection.
 - `tools/passive/forms.py` for passive same-page form discovery without submission.
+- `safety/policy.py` and `safety/rate_limit.py` for policy-backed execution limits.
+- `tools/active/xss_lab_check.py` for a harmless reflected-input lab check.
 - Markdown report writer for scan results under `reports/`.
-- Unit tests for scope rejection, audit logging, and passive tool output shape.
+- Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
 
 Not started:
 
 - SQLite-backed audit storage.
-- Active checks.
+- Additional active checks beyond the first reflected-input lab check.
 
 ## Safety Boundary
 
@@ -134,10 +136,11 @@ These must run only in a separate isolated lab profile with stricter limits and 
 
 ## Next Milestones
 
-1. Add policy loading and rate-limit enforcement to tool execution.
-2. Move audit logging to SQLite when queryability is needed.
-3. Add one safe DVWA/Juice Shop active check after human review.
-4. Add Redis/Celery only after background jobs are needed.
+1. Run human review of `lab_xss_reflection_check` before using it against live lab containers.
+2. Add API/service wiring for the approved active check.
+3. Move audit logging to SQLite when queryability is needed.
+4. Add the next safe DVWA/Juice Shop active check only after review.
+5. Add Redis/Celery only after background jobs are needed.
 
 ## Operating Commands
 
