@@ -13,3 +13,4 @@ Examples:
 Implemented:
 
 - `headers.py`: `inspect_headers`, a passive allowlist-guarded response header check with JSONL audit logging.
+- `cookies.py`: `inspect_cookies`, a passive allowlist-guarded cookie attribute check with JSONL audit logging.

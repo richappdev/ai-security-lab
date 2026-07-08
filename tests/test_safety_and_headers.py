@@ -7,6 +7,7 @@ from pathlib import Path
 
 from safety.audit_log import append_audit_record
 from safety.scope_guard import ScopeError, check_target_allowed, require_target_allowed
+from tools.passive.cookies import inspect_cookies
 from tools.passive.headers import inspect_headers
 
 
@@ -27,6 +28,31 @@ class FakeResponse:
 
 def fake_opener(request, timeout):
     return FakeResponse()
+
+
+class FakeCookieHeaders:
+    def get_all(self, name):
+        if name.lower() == "set-cookie":
+            return [
+                "sessionid=abc123; Path=/; HttpOnly; SameSite=Lax",
+                "theme=light; Path=/",
+            ]
+        return []
+
+
+class FakeCookieResponse:
+    status = 200
+    headers = FakeCookieHeaders()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+
+def fake_cookie_opener(request, timeout):
+    return FakeCookieResponse()
 
 
 def failing_opener(request, timeout):
@@ -112,6 +138,41 @@ class SafetyAndHeadersTests(unittest.TestCase):
                 target="https://example.com",
                 operator="tester",
                 run_id="run-rejected",
+                repo_root=repo,
+                opener=failing_opener,
+            )
+            audit_path = Path(repo) / "logs" / "audit.jsonl"
+            audit_records = audit_path.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["findings"][0]["id"], "target_rejected")
+        self.assertEqual(len(audit_records), 1)
+
+    def test_inspect_cookies_output_shape_and_audit(self):
+        with self.make_repo() as repo:
+            result = inspect_cookies(
+                target="http://127.0.0.1:3000",
+                operator="tester",
+                run_id="run-cookies",
+                repo_root=repo,
+                opener=fake_cookie_opener,
+            )
+            audit_path = Path(repo) / "logs" / "audit.jsonl"
+            audit_records = audit_path.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(result["tool"], "inspect_cookies")
+        self.assertEqual(result["risk"], "passive")
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(len(result["cookies"]), 2)
+        self.assertTrue(any(finding["id"] == "cookie_missing_attribute" for finding in result["findings"]))
+        self.assertEqual(len(audit_records), 2)
+
+    def test_inspect_cookies_rejects_out_of_scope_without_network(self):
+        with self.make_repo() as repo:
+            result = inspect_cookies(
+                target="https://example.com",
+                operator="tester",
+                run_id="run-cookies-rejected",
                 repo_root=repo,
                 opener=failing_opener,
             )
