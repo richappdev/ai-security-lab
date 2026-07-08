@@ -12,6 +12,50 @@ from tools.passive.forms import discover_forms
 from tools.passive.headers import inspect_headers
 
 
+POLICY_TEXT = """version: 1
+
+scope:
+  allowed_targets_file: targets.allowlist
+  localhost_only_by_default: true
+  deny_public_ips: true
+  deny_private_network_scan: true
+  deny_third_party_domains: true
+
+limits:
+  default_timeout_seconds: 10
+  max_timeout_seconds: 30
+  max_requests_per_minute: 30
+  max_same_origin_pages: 25
+
+allowed_activity:
+  - passive_http_inspection
+  - same_origin_crawl
+  - local_lab_active_checks
+
+blocked_activity:
+  - public_target_testing
+  - credential_stuffing
+  - destructive_exploit
+  - denial_of_service
+  - lateral_movement
+  - data_exfiltration
+
+audit:
+  required: true
+  output_directory: logs
+  fields:
+    - run_id
+    - operator
+    - tool
+    - target
+    - risk
+    - started_at
+    - ended_at
+    - status
+    - result_summary
+"""
+
+
 class FakeResponse:
     status = 200
     headers = {
@@ -106,6 +150,8 @@ class SafetyAndHeadersTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        (root / "safety").mkdir()
+        (root / "safety" / "policy.yml").write_text(POLICY_TEXT, encoding="utf-8")
         return temp_dir
 
     def test_allowlisted_local_target_passes(self):
@@ -180,6 +226,43 @@ class SafetyAndHeadersTests(unittest.TestCase):
         self.assertEqual(result["status"], "rejected")
         self.assertEqual(result["findings"][0]["id"], "target_rejected")
         self.assertEqual(len(audit_records), 1)
+
+    def test_inspect_headers_rejects_timeout_above_policy_without_network(self):
+        with self.make_repo() as repo:
+            result = inspect_headers(
+                target="http://127.0.0.1:3000",
+                operator="tester",
+                run_id="run-timeout-rejected",
+                timeout_seconds=31,
+                repo_root=repo,
+                opener=failing_opener,
+            )
+            audit_path = Path(repo) / "logs" / "audit.jsonl"
+            audit_records = audit_path.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["findings"][0]["id"], "policy_rejected")
+        self.assertEqual(len(audit_records), 1)
+
+    def test_inspect_headers_passes_resolved_timeout_to_opener(self):
+        observed: dict[str, int] = {}
+
+        def observing_opener(request, timeout):
+            observed["timeout"] = timeout
+            return FakeResponse()
+
+        with self.make_repo() as repo:
+            result = inspect_headers(
+                target="http://127.0.0.1:3000",
+                operator="tester",
+                run_id="run-timeout-observed",
+                timeout_seconds=None,
+                repo_root=repo,
+                opener=observing_opener,
+            )
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(observed["timeout"], 10)
 
     def test_inspect_cookies_output_shape_and_audit(self):
         with self.make_repo() as repo:

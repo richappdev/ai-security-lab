@@ -9,6 +9,35 @@ from unittest.mock import patch
 from app.api.service import run_passive_header_scan
 
 
+POLICY_TEXT = """version: 1
+
+scope:
+  allowed_targets_file: targets.allowlist
+  localhost_only_by_default: true
+  deny_public_ips: true
+  deny_private_network_scan: true
+  deny_third_party_domains: true
+
+limits:
+  default_timeout_seconds: 10
+  max_timeout_seconds: 30
+  max_requests_per_minute: 30
+  max_same_origin_pages: 25
+
+allowed_activity:
+  - passive_http_inspection
+
+blocked_activity:
+  - public_target_testing
+
+audit:
+  required: true
+  output_directory: logs
+  fields:
+    - run_id
+"""
+
+
 class FakeResponse:
     status = 200
     headers = {
@@ -33,6 +62,8 @@ class AppServiceTests(unittest.TestCase):
         temp_dir = tempfile.TemporaryDirectory()
         root = Path(temp_dir.name)
         (root / "targets.allowlist").write_text("http://127.0.0.1:3000\n", encoding="utf-8")
+        (root / "safety").mkdir()
+        (root / "safety" / "policy.yml").write_text(POLICY_TEXT, encoding="utf-8")
         return temp_dir
 
     def test_header_scan_service_calls_guarded_tool(self):
@@ -73,6 +104,8 @@ class FastAPITests(unittest.TestCase):
         temp_dir = tempfile.TemporaryDirectory()
         root = Path(temp_dir.name)
         (root / "targets.allowlist").write_text("http://127.0.0.1:3000\n", encoding="utf-8")
+        (root / "safety").mkdir()
+        (root / "safety" / "policy.yml").write_text(POLICY_TEXT, encoding="utf-8")
         return temp_dir
 
     def test_health_endpoint(self):

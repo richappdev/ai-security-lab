@@ -9,6 +9,8 @@ from typing import Any, Callable
 from urllib.request import Request, urlopen
 
 from safety.audit_log import append_audit_record, utc_now_iso
+from safety.policy import PolicyError, resolve_execution_limits
+from safety.rate_limit import RateLimiter
 from safety.scope_guard import ScopeError, check_target_allowed
 
 
@@ -35,19 +37,26 @@ def inspect_headers(
     target: str,
     operator: str,
     run_id: str,
-    timeout_seconds: int = 10,
+    timeout_seconds: int | None = None,
+    rate_limit_per_minute: int | None = None,
     repo_root: str | Path | None = None,
     opener: Callable[..., Any] = urlopen,
 ) -> dict[str, Any]:
     started_at = utc_now_iso()
 
     try:
+        limits = resolve_execution_limits(
+            requested_timeout_seconds=timeout_seconds,
+            requested_rate_limit_per_minute=rate_limit_per_minute,
+            repo_root=repo_root,
+        )
         decision = check_target_allowed(target, repo_root)
         normalized_target = decision.normalized_target
         if not decision.allowed:
             raise ScopeError(decision.reason)
-    except ScopeError as exc:
+    except (PolicyError, ScopeError) as exc:
         ended_at = utc_now_iso()
+        finding_id = "target_rejected" if isinstance(exc, ScopeError) else "policy_rejected"
         append_audit_record(
             {
                 "run_id": run_id,
@@ -69,7 +78,7 @@ def inspect_headers(
             "status": "rejected",
             "http_status": None,
             "headers": {},
-            "findings": [{"id": "target_rejected", "severity": "error", "evidence": str(exc)}],
+            "findings": [{"id": finding_id, "severity": "error", "evidence": str(exc)}],
             "started_at": started_at,
             "ended_at": ended_at,
         }
@@ -95,8 +104,9 @@ def inspect_headers(
     http_status: int | None = None
 
     try:
+        RateLimiter(limits.rate_limit_per_minute).wait()
         request = Request(normalized_target, headers={"User-Agent": "ai-security-lab/inspect-headers"})
-        with opener(request, timeout=timeout_seconds) as response:
+        with opener(request, timeout=limits.timeout_seconds) as response:
             headers = _response_headers(response)
             http_status = getattr(response, "status", None)
 
@@ -150,7 +160,8 @@ def main() -> int:
     parser.add_argument("--target", required=True)
     parser.add_argument("--operator", default="local-user")
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--timeout-seconds", type=int, default=10)
+    parser.add_argument("--timeout-seconds", type=int, default=None)
+    parser.add_argument("--rate-limit-per-minute", type=int, default=None)
     args = parser.parse_args()
 
     result = inspect_headers(
@@ -158,6 +169,7 @@ def main() -> int:
         operator=args.operator,
         run_id=args.run_id,
         timeout_seconds=args.timeout_seconds,
+        rate_limit_per_minute=args.rate_limit_per_minute,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["status"] == "completed" else 1
