@@ -14,3 +14,4 @@ Implemented:
 
 - `headers.py`: `inspect_headers`, a passive allowlist-guarded response header check with JSONL audit logging.
 - `cookies.py`: `inspect_cookies`, a passive allowlist-guarded cookie attribute check with JSONL audit logging.
+- `forms.py`: `discover_forms`, a passive allowlist-guarded same-page form discovery check with JSONL audit logging and no form submissions.

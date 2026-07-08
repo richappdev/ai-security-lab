@@ -85,6 +85,7 @@ python -m unittest discover -s tests
 - `safety/audit_log.py` writes append-only JSONL audit records under `logs/`.
 - `tools/passive/headers.py` implements passive response header inspection.
 - `tools/passive/cookies.py` implements passive cookie attribute inspection.
+- `tools/passive/forms.py` implements passive same-page form discovery without submitting forms.
 - `reports/writer.py` generates basic Markdown scan reports under `reports/`.
 - `tests/test_safety_and_headers.py` covers scope checks, audit logging, and passive tool output shape.
 

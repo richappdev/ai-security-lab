@@ -14,7 +14,7 @@ Build a local, repeatable, and legally safe testing environment for developing a
 - PowerShell helper scripts in `scripts/`
 - Python safety guard for allowlist and local-lab target checks
 - JSONL audit logging under `logs/`
-- Passive tools: `inspect_headers`, `inspect_cookies`
+- Passive tools: `inspect_headers`, `inspect_cookies`, `discover_forms`
 
 ## Implementation Status
 
@@ -27,8 +27,9 @@ Completed:
 - `safety/audit_log.py` for append-only JSONL audit records.
 - `tools/passive/headers.py` for passive response header inspection.
 - `tools/passive/cookies.py` for passive cookie attribute inspection.
+- `tools/passive/forms.py` for passive same-page form discovery without submission.
 - Markdown report writer for scan results under `reports/`.
-- Unit tests for scope rejection, audit logging, and passive header output shape.
+- Unit tests for scope rejection, audit logging, and passive tool output shape.
 
 Not started:
 
@@ -97,12 +98,12 @@ The current repository has the lab targets. The `security-app`, `postgres`, and 
 - Capture response headers.
 - Identify server hints and framework clues.
 - Record page title and basic metadata.
+- Discover forms without submitting payloads.
 - No exploit payloads.
 
 ### Phase 2: Low-Risk Active Checks
 
 - Directory and route discovery with strict rate limits.
-- Form discovery.
 - Basic misconfiguration checks.
 - Safe vulnerability probes against lab URLs only.
 
@@ -133,11 +134,10 @@ These must run only in a separate isolated lab profile with stricter limits and 
 
 ## Next Milestones
 
-1. Expand passive tools with form discovery.
-2. Add policy loading and rate-limit enforcement to tool execution.
-3. Move audit logging to SQLite when queryability is needed.
-4. Add one safe DVWA/Juice Shop active check after human review.
-5. Add Redis/Celery only after background jobs are needed.
+1. Add policy loading and rate-limit enforcement to tool execution.
+2. Move audit logging to SQLite when queryability is needed.
+3. Add one safe DVWA/Juice Shop active check after human review.
+4. Add Redis/Celery only after background jobs are needed.
 
 ## Operating Commands
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from safety.audit_log import append_audit_record
 from safety.scope_guard import ScopeError, check_target_allowed, require_target_allowed
 from tools.passive.cookies import inspect_cookies
+from tools.passive.forms import discover_forms
 from tools.passive.headers import inspect_headers
 
 
@@ -57,6 +58,38 @@ def fake_cookie_opener(request, timeout):
 
 def failing_opener(request, timeout):
     raise AssertionError("network opener should not be called")
+
+
+class FakeFormResponse:
+    status = 200
+    headers = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self):
+        return b"""
+        <html>
+          <body>
+            <form method="post" action="/login">
+              <input name="username">
+              <input name="password" type="password">
+              <textarea name="note"></textarea>
+              <select name="role"></select>
+            </form>
+            <form action="https://example.com/collect">
+              <input name="token" type="hidden">
+            </form>
+          </body>
+        </html>
+        """
+
+
+def fake_form_opener(request, timeout):
+    return FakeFormResponse()
 
 
 class SafetyAndHeadersTests(unittest.TestCase):
@@ -182,6 +215,73 @@ class SafetyAndHeadersTests(unittest.TestCase):
         self.assertEqual(result["status"], "rejected")
         self.assertEqual(result["findings"][0]["id"], "target_rejected")
         self.assertEqual(len(audit_records), 1)
+
+    def test_discover_forms_with_fake_html(self):
+        with self.make_repo() as repo:
+            result = discover_forms(
+                target="http://127.0.0.1:3000",
+                operator="tester",
+                run_id="run-forms",
+                repo_root=repo,
+                opener=fake_form_opener,
+            )
+
+        self.assertEqual(result["tool"], "discover_forms")
+        self.assertEqual(result["risk"], "passive")
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["http_status"], 200)
+        self.assertEqual(len(result["forms"]), 2)
+        self.assertEqual(result["forms"][0]["method"], "POST")
+        self.assertEqual(result["forms"][0]["action"], "http://127.0.0.1:3000/login")
+        self.assertTrue(result["forms"][0]["same_origin"])
+        self.assertEqual(
+            result["forms"][0]["inputs"],
+            [
+                {"name": "username", "type": "text"},
+                {"name": "password", "type": "password"},
+                {"name": "note", "type": "textarea"},
+                {"name": "role", "type": "select"},
+            ],
+        )
+        self.assertFalse(result["forms"][1]["same_origin"])
+        self.assertTrue(any(finding["id"] == "cross_origin_form_action" for finding in result["findings"]))
+
+    def test_discover_forms_rejects_out_of_scope_without_network(self):
+        with self.make_repo() as repo:
+            result = discover_forms(
+                target="https://example.com",
+                operator="tester",
+                run_id="run-forms-rejected",
+                repo_root=repo,
+                opener=failing_opener,
+            )
+            audit_path = Path(repo) / "logs" / "audit.jsonl"
+            audit_records = audit_path.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["findings"][0]["id"], "target_rejected")
+        self.assertEqual(len(audit_records), 1)
+
+    def test_discover_forms_audit_log_shape(self):
+        with self.make_repo() as repo:
+            discover_forms(
+                target="http://127.0.0.1:3000",
+                operator="tester",
+                run_id="run-forms-audit",
+                repo_root=repo,
+                opener=fake_form_opener,
+            )
+            audit_path = Path(repo) / "logs" / "audit.jsonl"
+            audit_records = [
+                json.loads(line)
+                for line in audit_path.read_text(encoding="utf-8").splitlines()
+            ]
+
+        self.assertEqual(len(audit_records), 2)
+        self.assertEqual(audit_records[0]["tool"], "discover_forms")
+        self.assertEqual(audit_records[0]["status"], "started")
+        self.assertEqual(audit_records[1]["status"], "completed")
+        self.assertEqual(audit_records[1]["result_summary"], "2 form(s), 1 finding(s)")
 
 
 if __name__ == "__main__":
