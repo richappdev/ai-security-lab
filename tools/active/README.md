@@ -2,6 +2,8 @@
 
 Active tools send test inputs to allowlisted lab targets.
 
+Use localhost URLs from host tools. Use `.local` target aliases when the containerized API is the component sending requests to the lab targets.
+
 Requirements:
 
 - Explicit listing in `tools/manifest.yml`.

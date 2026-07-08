@@ -40,3 +40,13 @@ tools:
     timeout_seconds: 10
     audit_required: true
     description: Run a harmless reflected-input check against approved lab targets only.
+
+  - name: lab_http_methods_check
+    category: active
+    risk: active-low-risk
+    entrypoint: tools/active/http_methods_check.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Send one OPTIONS request to report allowed HTTP methods on approved lab targets only.

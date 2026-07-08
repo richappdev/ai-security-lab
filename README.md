@@ -31,7 +31,7 @@ For AI-agent operation, start with:
 - DVWA at `http://127.0.0.1:8080`
 - Security app API at `http://127.0.0.1:8000`
 
-Both services are placed on a Docker bridge network named `ai-security-lab-net`. Host access is limited to localhost ports through the compose port bindings.
+Both target services are placed on a Docker bridge network named `ai-security-lab-net`. Host access is limited to localhost ports through the compose port bindings. Use `127.0.0.1` or `localhost` from host tools such as browsers, PowerShell, and direct host-side Python commands. Use the `.local` aliases, such as `http://juice-shop.local:3000` and `http://dvwa.local`, when the containerized API is the component making the request.
 
 ## Requirements
 
@@ -87,8 +87,9 @@ python -m unittest discover -s tests
 - `tools/passive/cookies.py` implements passive cookie attribute inspection.
 - `tools/passive/forms.py` implements passive same-page form discovery without submitting forms.
 - `tools/active/xss_lab_check.py` implements a harmless reflected-input check for allowlisted lab targets.
+- `tools/active/http_methods_check.py` implements a one-request OPTIONS method check for allowlisted lab targets.
 - `reports/writer.py` generates basic Markdown scan reports under `reports/`.
-- `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, and the first low-risk active check.
+- `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active checks.
 
 ## Safety Boundary
 

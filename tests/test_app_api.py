@@ -7,7 +7,11 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
-from app.api.service import run_active_xss_reflection_scan, run_passive_header_scan
+from app.api.service import (
+    run_active_http_methods_scan,
+    run_active_xss_reflection_scan,
+    run_passive_header_scan,
+)
 
 
 POLICY_TEXT = """version: 1
@@ -82,6 +86,21 @@ def reflecting_opener(request, timeout):
     return FakeReflectionResponse(f"<html>{marker}</html>")
 
 
+class FakeOptionsResponse:
+    status = 204
+    headers = {"Allow": "GET, HEAD, OPTIONS"}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+
+def options_opener(request, timeout):
+    return FakeOptionsResponse()
+
+
 class AppServiceTests(unittest.TestCase):
     def make_repo(self) -> tempfile.TemporaryDirectory[str]:
         temp_dir = tempfile.TemporaryDirectory()
@@ -153,6 +172,21 @@ class AppServiceTests(unittest.TestCase):
             self.assertEqual(result["status"], "completed")
             self.assertTrue(report_path.exists())
             self.assertEqual(report_path.name, "run-api-active-report-lab_xss_reflection_check.md")
+
+    def test_active_http_methods_service_calls_guarded_tool(self):
+        with self.make_repo() as repo:
+            result = run_active_http_methods_scan(
+                target="http://127.0.0.1:3000",
+                operator="api-test",
+                run_id="run-api-methods-test",
+                repo_root=repo,
+                opener=options_opener,
+            )
+
+        self.assertEqual(result["tool"], "lab_http_methods_check")
+        self.assertEqual(result["risk"], "active-low-risk")
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["allowed_methods"], ["GET", "HEAD", "OPTIONS"])
 
 
 @unittest.skipUnless(importlib.util.find_spec("fastapi"), "FastAPI is not installed")
@@ -240,6 +274,43 @@ class FastAPITests(unittest.TestCase):
                             "target": "http://127.0.0.1:3000",
                             "operator": "api-test",
                             "run_id": "run-api-active-test",
+                            "rate_limit_per_minute": 30,
+                            "generate_report": True,
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "completed")
+
+    def test_active_http_methods_endpoint(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        with self.make_repo() as repo:
+            with patch("app.api.main.configured_repo_root", return_value=Path(repo)):
+                with patch(
+                    "app.api.main.run_active_http_methods_scan",
+                    return_value={
+                        "tool": "lab_http_methods_check",
+                        "target": "http://127.0.0.1:3000",
+                        "risk": "active-low-risk",
+                        "status": "completed",
+                        "http_status": 204,
+                        "allowed_methods": ["GET", "HEAD", "OPTIONS"],
+                        "headers": {"Allow": "GET, HEAD, OPTIONS"},
+                        "findings": [],
+                        "started_at": "2026-07-07T00:00:00Z",
+                        "ended_at": "2026-07-07T00:00:01Z",
+                    },
+                ):
+                    client = TestClient(app)
+                    response = client.post(
+                        "/scan/active/http-methods",
+                        json={
+                            "target": "http://127.0.0.1:3000",
+                            "operator": "api-test",
+                            "run_id": "run-api-methods-test",
                             "rate_limit_per_minute": 30,
                             "generate_report": True,
                         },

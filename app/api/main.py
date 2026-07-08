@@ -13,6 +13,7 @@ from app.api.service import (
     DEFAULT_OPERATOR,
     DEFAULT_TIMEOUT_SECONDS,
     default_repo_root,
+    run_active_http_methods_scan,
     run_active_xss_reflection_scan,
     run_passive_header_scan,
 )
@@ -23,7 +24,7 @@ def configured_repo_root() -> Path:
 
 
 class HeaderScanRequest(BaseModel):
-    target: str = Field(..., examples=["http://127.0.0.1:3000"])
+    target: str = Field(..., examples=["http://juice-shop.local:3000"])
     operator: str = Field(DEFAULT_OPERATOR, min_length=1)
     run_id: str | None = None
     timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
@@ -31,7 +32,16 @@ class HeaderScanRequest(BaseModel):
 
 
 class ActiveXssReflectionRequest(BaseModel):
-    target: str = Field(..., examples=["http://127.0.0.1:3000"])
+    target: str = Field(..., examples=["http://juice-shop.local:3000"])
+    operator: str = Field(DEFAULT_OPERATOR, min_length=1)
+    run_id: str | None = None
+    timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
+    rate_limit_per_minute: int | None = Field(default=None, ge=1, le=30)
+    generate_report: bool = False
+
+
+class ActiveHttpMethodsRequest(BaseModel):
+    target: str = Field(..., examples=["http://juice-shop.local:3000"])
     operator: str = Field(DEFAULT_OPERATOR, min_length=1)
     run_id: str | None = None
     timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
@@ -71,6 +81,19 @@ def scan_passive_headers(request: HeaderScanRequest) -> dict[str, Any]:
 @app.post("/scan/active/xss-reflection")
 def scan_active_xss_reflection(request: ActiveXssReflectionRequest) -> dict[str, Any]:
     return run_active_xss_reflection_scan(
+        target=request.target,
+        operator=request.operator,
+        run_id=request.run_id,
+        timeout_seconds=request.timeout_seconds,
+        rate_limit_per_minute=request.rate_limit_per_minute,
+        repo_root=configured_repo_root(),
+        generate_report=request.generate_report,
+    )
+
+
+@app.post("/scan/active/http-methods")
+def scan_active_http_methods(request: ActiveHttpMethodsRequest) -> dict[str, Any]:
+    return run_active_http_methods_scan(
         target=request.target,
         operator=request.operator,
         run_id=request.run_id,
