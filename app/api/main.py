@@ -21,6 +21,7 @@ class HeaderScanRequest(BaseModel):
     operator: str = Field(DEFAULT_OPERATOR, min_length=1)
     run_id: str | None = None
     timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
+    generate_report: bool = False
 
 
 class HealthResponse(BaseModel):
@@ -48,4 +49,5 @@ def scan_passive_headers(request: HeaderScanRequest) -> dict[str, Any]:
         run_id=request.run_id,
         timeout_seconds=request.timeout_seconds,
         repo_root=configured_repo_root(),
+        generate_report=request.generate_report,
     )

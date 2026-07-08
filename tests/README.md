@@ -8,10 +8,10 @@ Current coverage:
 - Scope rejection.
 - Audit log writing.
 - Passive tool output shape.
+- Markdown report generation.
 
 Planned coverage:
 
 - Policy loading.
 - Rate-limit enforcement.
-- Report generation.
 - App endpoint behavior.

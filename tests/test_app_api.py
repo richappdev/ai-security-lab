@@ -49,6 +49,23 @@ class AppServiceTests(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["target"], "http://127.0.0.1:3000")
 
+    def test_header_scan_service_can_write_report(self):
+        with self.make_repo() as repo:
+            result = run_passive_header_scan(
+                target="http://127.0.0.1:3000",
+                operator="api-test",
+                run_id="run-api-report",
+                repo_root=repo,
+                opener=fake_opener,
+                generate_report=True,
+            )
+
+            report_path = Path(result["report"]["path"])
+
+            self.assertEqual(result["status"], "completed")
+            self.assertTrue(report_path.exists())
+            self.assertEqual(report_path.name, "run-api-report-inspect_headers.md")
+
 
 @unittest.skipUnless(importlib.util.find_spec("fastapi"), "FastAPI is not installed")
 class FastAPITests(unittest.TestCase):
@@ -97,6 +114,7 @@ class FastAPITests(unittest.TestCase):
                             "target": "http://127.0.0.1:3000",
                             "operator": "api-test",
                             "run_id": "run-api-test",
+                            "generate_report": True,
                         },
                     )
 

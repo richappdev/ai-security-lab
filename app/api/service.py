@@ -7,6 +7,7 @@ from typing import Any, Callable
 from urllib.request import urlopen
 from uuid import uuid4
 
+from reports.writer import write_markdown_report
 from tools.passive.headers import inspect_headers
 
 
@@ -29,12 +30,23 @@ def run_passive_header_scan(
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     repo_root: str | Path | None = None,
     opener: Callable[..., Any] = urlopen,
+    generate_report: bool = False,
 ) -> dict[str, Any]:
-    return inspect_headers(
+    actual_run_id = run_id or new_run_id()
+    actual_repo_root = repo_root or default_repo_root()
+    result = inspect_headers(
         target=target,
         operator=operator or DEFAULT_OPERATOR,
-        run_id=run_id or new_run_id(),
+        run_id=actual_run_id,
         timeout_seconds=timeout_seconds,
-        repo_root=repo_root or default_repo_root(),
+        repo_root=actual_repo_root,
         opener=opener,
     )
+    if generate_report:
+        result["report"] = write_markdown_report(
+            result,
+            operator=operator or DEFAULT_OPERATOR,
+            run_id=actual_run_id,
+            repo_root=actual_repo_root,
+        )
+    return result

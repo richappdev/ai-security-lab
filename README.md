@@ -84,6 +84,7 @@ python -m unittest discover -s tests
 - `safety/scope_guard.py` enforces exact allowlist matching and local-lab host constraints before tool network access.
 - `safety/audit_log.py` writes append-only JSONL audit records under `logs/`.
 - `tools/passive/headers.py` implements the first passive tool, `inspect_headers`.
+- `reports/writer.py` generates basic Markdown scan reports under `reports/`.
 - `tests/test_safety_and_headers.py` covers scope checks, audit logging, and passive tool output shape.
 
 ## Safety Boundary

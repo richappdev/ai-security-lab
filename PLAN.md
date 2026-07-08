@@ -26,12 +26,12 @@ Completed:
 - `safety/scope_guard.py` for exact allowlist validation and local-lab host enforcement.
 - `safety/audit_log.py` for append-only JSONL audit records.
 - `tools/passive/headers.py` for passive response header inspection.
+- Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, and passive header output shape.
 
 Not started:
 
 - SQLite-backed audit storage.
-- Report generation.
 - Active checks.
 
 ## Safety Boundary
@@ -132,8 +132,8 @@ These must run only in a separate isolated lab profile with stricter limits and 
 
 ## Next Milestones
 
-1. Add a simple report writer under `reports/`.
-2. Expand passive tools with cookie inspection and form discovery.
+1. Expand passive tools with cookie inspection and form discovery.
+2. Add policy loading and rate-limit enforcement to tool execution.
 3. Move audit logging to SQLite when queryability is needed.
 4. Add one safe DVWA/Juice Shop active check after human review.
 5. Add Redis/Celery only after background jobs are needed.
