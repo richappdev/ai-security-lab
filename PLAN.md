@@ -38,6 +38,7 @@ Completed:
 - In-process FastAPI job registry with job status and cancellation endpoints.
 - Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
+- Current verification: `python -m unittest discover -s tests` passes with 56 tests run and 9 skipped.
 
 Not started:
 
@@ -100,39 +101,117 @@ docker-compose.yml
 
 The current repository has the lab targets and the `security-app` service. PostgreSQL and Redis should be added only when audit/reporting query needs or background jobs justify the extra runtime complexity.
 
-## Testing Phases
+## Implementation Phases
 
-### Phase 1: Passive Checks
+### Phase 1: Documentation Reconciliation
 
-- Confirm target is reachable.
-- Capture response headers.
-- Identify server hints and framework clues.
-- Record page title and basic metadata.
-- Discover forms without submitting payloads.
-- No exploit payloads.
+Priority: High
 
-### Phase 2: Low-Risk Active Checks
+Tasks:
 
-- Single-route existence checks with strict rate limits.
-- Directory and bulk route discovery only after stop/cancel support exists.
-- Basic misconfiguration checks.
-- Safe vulnerability probes against lab URLs only.
-- Current single-request checks are timeout-bound; explicit cancellation is required before this phase expands to multi-request scans.
+- Update `PLAN.md` so completed items match the current codebase.
+- Move `security-app` from future compose target to current stack.
+- Add `lab_http_methods_check` and `lab_route_exists_check` to completed active checks.
+- Replace stale next milestones with the actual next work.
+- Update `docs/architecture.md` so `tools/`, `safety/`, and `reports/` are no longer described as future-only components.
+- Verify `README.md`, `app/README.md`, and `tools/manifest.yml` agree on exposed endpoints and implemented tools.
 
-### Phase 3: Controlled Attack Modules
+Acceptance criteria:
 
-- SQL injection checks against DVWA and Juice Shop.
-- XSS checks against known vulnerable lab forms.
-- Weak credential testing with tiny wordlists and low rates.
-- Per-module timeout and cancellation.
+- No doc says `security-app` is future work.
+- No doc says the HTTP methods check is not started.
+- The next milestone list reflects current implementation reality.
+- `python -m unittest discover -s tests` still passes.
 
-### Phase 4: High-Risk Modules
+### Phase 2: Active Execution Controls
 
-- Automated exploit validation.
-- Lateral-movement simulation.
-- DDoS or stress simulation.
+Priority: Completed for the MVP foundation; required for future multi-request active checks
 
-These must run only in a separate isolated lab profile with stricter limits and explicit confirmation.
+Implemented:
+
+- Chose an in-process FastAPI job registry instead of Redis/Celery for the next milestone.
+- Added job states: `queued`, `running`, `completed`, `failed`, `cancel_requested`, and `cancelled`.
+- Added a cancellation token contract for future long-running tools.
+- Added `GET /jobs/{job_id}` and `POST /jobs/{job_id}/cancel`.
+- Kept current single-request scan endpoints synchronous, timeout-bound, and audited.
+- Added deterministic tests for job creation, read, completion, failure, cancellation, terminal-state behavior, and a cancellable fake multi-step job.
+
+Acceptance criteria:
+
+- Multi-request active modules must use the in-process job registry and cancellation token before they are added.
+- Current one-request active modules remain timeout-bound and audited.
+- Redis/Celery remains deferred until durable or cross-process background execution is justified.
+
+### Phase 3: Next Low-Risk Active Check
+
+Priority: Medium
+
+Completed in this phase:
+
+- Safe route existence check against known lab-local paths via `lab_route_exists_check`.
+
+Candidate checks:
+
+- Security header delta check between root and known application routes.
+- Non-mutating authentication page metadata check for DVWA/Juice Shop.
+
+Constraints:
+
+- No credential stuffing.
+- No destructive requests.
+- No public or third-party targets.
+- No high-volume crawling.
+- Must use `targets.allowlist` before network access.
+- Must resolve policy limits before execution.
+- Must write audit start and completion records.
+- Must be added to `tools/manifest.yml`.
+- Must include unit tests for success, scope rejection, policy rejection, and request failure.
+
+Acceptance criteria:
+
+- New tool is reviewed before use against live lab containers.
+- API/service wiring exists only after the tool passes isolated tests.
+- Generated findings use one of the existing risk labels: `passive`, `active-low-risk`, or `active-high-risk`.
+
+### Phase 4: Audit Storage Evolution
+
+Priority: Medium, only when queryability is needed
+
+Current state:
+
+- Audit logging is append-only JSONL under `logs/audit.jsonl`.
+
+Tasks:
+
+- Define query requirements before introducing SQLite.
+- Preserve append-only behavior or provide equivalent tamper-evident semantics.
+- Add migration or dual-write strategy if existing JSONL records need to be retained.
+- Add tests for audit writes, reads, and failure behavior.
+
+Acceptance criteria:
+
+- SQLite is introduced only with clear reporting/query needs.
+- Existing audit fields remain available: run ID, operator, tool, target, risk, start/end time, status, and result summary.
+
+### Phase 5: Background Jobs and Expanded Runtime
+
+Priority: Later
+
+Current state:
+
+- In-process job status and cancellation endpoints already exist for future cancellable tools.
+
+Tasks:
+
+- Add Redis/Celery only after scans need process isolation, durable queues, or cross-process execution.
+- Require future long-running tools to use the existing job registry and cancellation token before live use.
+- Revisit PostgreSQL only if SQLite is insufficient for audit/reporting needs.
+
+Acceptance criteria:
+
+- Background runtime is justified by tool behavior, not added preemptively.
+- The operator can see scan status and stop eligible scans.
+- Safety controls remain enforced inside each tool, not only at API boundaries.
 
 ## Guardrails Status Before Expanding Active Testing
 
@@ -147,10 +226,11 @@ These must run only in a separate isolated lab profile with stricter limits and 
 
 ## Next Milestones
 
-1. Keep `PLAN.md`, `README.md`, `docs/architecture.md`, and `tools/manifest.yml` synchronized as the source of truth for implementation status.
-2. Require future bulk route checks, crawlers, or other multi-request active modules to use the in-process job/cancel model.
+1. Use the in-process job registry and cancellation token as the required foundation for any future bulk route checks, crawlers, credential checks, exploit validation, or other long-running probes.
+2. Keep current active checks limited to single-request, active-low-risk behavior unless a future tool passes human review and uses the job/cancel contract where needed.
 3. Move audit logging to SQLite only when queryability is needed.
 4. Add Redis/Celery only after background jobs need process isolation or durable queues.
+5. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, and `tools/manifest.yml` synchronized.
 
 ## Active Cancellation Boundary
 
