@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlparse
 
 from app.api.service import (
     run_active_http_methods_scan,
+    run_active_route_exists_scan,
     run_active_xss_reflection_scan,
     run_passive_header_scan,
 )
@@ -101,6 +102,21 @@ def options_opener(request, timeout):
     return FakeOptionsResponse()
 
 
+class FakeRouteResponse:
+    status = 200
+    headers = {"Content-Type": "text/html"}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+
+def route_opener(request, timeout):
+    return FakeRouteResponse()
+
+
 class AppServiceTests(unittest.TestCase):
     def make_repo(self) -> tempfile.TemporaryDirectory[str]:
         temp_dir = tempfile.TemporaryDirectory()
@@ -187,6 +203,22 @@ class AppServiceTests(unittest.TestCase):
         self.assertEqual(result["risk"], "active-low-risk")
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["allowed_methods"], ["GET", "HEAD", "OPTIONS"])
+
+    def test_active_route_exists_service_calls_guarded_tool(self):
+        with self.make_repo() as repo:
+            result = run_active_route_exists_scan(
+                target="http://127.0.0.1:3000",
+                route_path="/login",
+                operator="api-test",
+                run_id="run-api-route-test",
+                repo_root=repo,
+                opener=route_opener,
+            )
+
+        self.assertEqual(result["tool"], "lab_route_exists_check")
+        self.assertEqual(result["risk"], "active-low-risk")
+        self.assertEqual(result["status"], "completed")
+        self.assertTrue(result["exists"])
 
 
 @unittest.skipUnless(importlib.util.find_spec("fastapi"), "FastAPI is not installed")
@@ -326,6 +358,46 @@ class FastAPITests(unittest.TestCase):
                             "target": "http://127.0.0.1:3000",
                             "operator": "api-test",
                             "run_id": "run-api-methods-test",
+                            "rate_limit_per_minute": 30,
+                            "generate_report": True,
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "completed")
+
+    def test_active_route_exists_endpoint(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        with self.make_repo() as repo:
+            with patch("app.api.main.configured_repo_root", return_value=Path(repo)):
+                with patch(
+                    "app.api.main.run_active_route_exists_scan",
+                    return_value={
+                        "tool": "lab_route_exists_check",
+                        "target": "http://127.0.0.1:3000",
+                        "route_path": "/login",
+                        "route_url": "http://127.0.0.1:3000/login",
+                        "risk": "active-low-risk",
+                        "status": "completed",
+                        "http_status": 200,
+                        "exists": True,
+                        "headers": {},
+                        "findings": [],
+                        "started_at": "2026-07-07T00:00:00Z",
+                        "ended_at": "2026-07-07T00:00:01Z",
+                    },
+                ):
+                    client = TestClient(app)
+                    response = client.post(
+                        "/scan/active/route-exists",
+                        json={
+                            "target": "http://127.0.0.1:3000",
+                            "route_path": "/login",
+                            "operator": "api-test",
+                            "run_id": "run-api-route-test",
                             "rate_limit_per_minute": 30,
                             "generate_report": True,
                         },

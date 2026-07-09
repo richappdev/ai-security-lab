@@ -28,6 +28,7 @@ This repository is for authorized local lab testing only.
 - Per-tool rate limit.
 - Audit logging for all tool calls.
 - Clear report labeling by risk level.
+- Stop/cancel support before adding multi-request or long-running active tools.
 
 ## Human Review Required
 

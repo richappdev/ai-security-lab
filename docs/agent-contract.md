@@ -30,6 +30,7 @@ Before requesting a tool run, the agent must confirm:
 - The chosen tool risk level is appropriate for the objective.
 - The tool has a timeout.
 - The tool has audit logging enabled.
+- Multi-request or long-running active work has stop/cancel support before it is requested.
 
 ## Prohibited Behavior
 

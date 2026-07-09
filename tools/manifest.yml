@@ -39,7 +39,7 @@ tools:
     requires_network: true
     timeout_seconds: 10
     audit_required: true
-    description: Run a harmless reflected-input check against approved lab targets only.
+    description: Run a harmless single-request reflected-input check against approved lab targets only.
 
   - name: lab_http_methods_check
     category: active
@@ -49,4 +49,14 @@ tools:
     requires_network: true
     timeout_seconds: 10
     audit_required: true
-    description: Send one OPTIONS request to report allowed HTTP methods on approved lab targets only.
+    description: Send a single-request OPTIONS check to report allowed HTTP methods on approved lab targets only.
+
+  - name: lab_route_exists_check
+    category: active
+    risk: active-low-risk
+    entrypoint: tools/active/route_exists_check.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Send a single-request HEAD check for one known route path on an approved lab target only.

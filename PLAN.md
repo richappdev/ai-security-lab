@@ -15,7 +15,7 @@ Build a local, repeatable, and legally safe testing environment for developing a
 - Python safety guard for allowlist and local-lab target checks
 - JSONL audit logging under `logs/`
 - Passive tools: `inspect_headers`, `inspect_cookies`, `discover_forms`
-- Active low-risk tools: `lab_xss_reflection_check`, `lab_http_methods_check`
+- Active low-risk tools: `lab_xss_reflection_check`, `lab_http_methods_check`, `lab_route_exists_check`
 - FastAPI `security-app` service at `http://127.0.0.1:8000`
 
 ## Implementation Status
@@ -33,6 +33,7 @@ Completed:
 - `safety/policy.py` and `safety/rate_limit.py` for policy-backed execution limits.
 - `tools/active/xss_lab_check.py` for a harmless reflected-input lab check.
 - `tools/active/http_methods_check.py` for a one-request HTTP OPTIONS method check.
+- `tools/active/route_exists_check.py` for a one-request known-route existence check.
 - Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
 
@@ -110,10 +111,11 @@ The current repository has the lab targets and the `security-app` service. Postg
 
 ### Phase 2: Low-Risk Active Checks
 
-- Directory and route discovery with strict rate limits.
+- Single-route existence checks with strict rate limits.
+- Directory and bulk route discovery only after stop/cancel support exists.
 - Basic misconfiguration checks.
 - Safe vulnerability probes against lab URLs only.
-- Current one-request checks are timeout-bound; explicit cancellation is required before this phase expands to multi-request scans.
+- Current single-request checks are timeout-bound; explicit cancellation is required before this phase expands to multi-request scans.
 
 ### Phase 3: Controlled Attack Modules
 
@@ -137,16 +139,27 @@ These must run only in a separate isolated lab profile with stricter limits and 
 - Done: enforce policy-backed timeout and request-rate limits in current tools.
 - Done: write append-only JSONL audit records.
 - Done: label results as `passive` or `active-low-risk`.
+- Done: document that current single-request active tools are timeout-bound.
 - Next: define stop/cancel support before adding multi-request or long-running active modules.
 - Later: add SQLite-backed audit storage when queryability is needed.
 
 ## Next Milestones
 
 1. Keep `PLAN.md`, `README.md`, `docs/architecture.md`, and `tools/manifest.yml` synchronized as the source of truth for implementation status.
-2. Document the cancellation boundary: current one-request checks are timeout-bound; multi-request tools need explicit stop/cancel support.
-3. Select and review the next safe DVWA/Juice Shop active check before implementation.
+2. Define the stop/cancel implementation model before adding bulk route checks, crawlers, or other multi-request active modules.
+3. Review whether `lab_route_exists_check` should be exposed in the static UI after API-level verification against live lab containers.
 4. Move audit logging to SQLite only when queryability is needed.
 5. Add Redis/Celery only after background jobs are needed.
+
+## Active Cancellation Boundary
+
+Current single-request active tools are timeout-bound and run synchronously:
+
+- `lab_xss_reflection_check`
+- `lab_http_methods_check`
+- `lab_route_exists_check`
+
+Multi-request active tools must not be added until a stop/cancel design exists. Bulk route discovery, crawling, credential checks, exploit validation, and long-running probes require either a cancellable in-process job registry or a background worker model with job status and cancellation endpoints.
 
 ## Operating Commands
 

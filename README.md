@@ -88,6 +88,7 @@ python -m unittest discover -s tests
 - `tools/passive/forms.py` implements passive same-page form discovery without submitting forms.
 - `tools/active/xss_lab_check.py` implements a harmless reflected-input check for allowlisted lab targets.
 - `tools/active/http_methods_check.py` implements a one-request OPTIONS method check for allowlisted lab targets.
+- `tools/active/route_exists_check.py` implements a one-request HEAD route existence check for one known route path on an allowlisted lab target.
 - `reports/writer.py` generates basic Markdown scan reports under `reports/`.
 - `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active checks.
 
@@ -97,7 +98,7 @@ python -m unittest discover -s tests
 - Keep `.env` bind addresses set to `127.0.0.1`.
 - Do not point scanning, brute force, exploit, DDoS, or lateral-movement modules at public IPs or third-party domains.
 - Add rate limits and timeouts to every active test module.
-- Add explicit cancellation before introducing multi-request or long-running active test modules.
+- Current single-request active tools are timeout-bound; add explicit cancellation before introducing multi-request or long-running active test modules.
 - Keep audit logs for target, module, start time, end time, and result.
 
 ## Suggested MVP Flow

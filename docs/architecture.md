@@ -33,7 +33,13 @@ User request
 
 ## Active Execution Boundary
 
-Current active checks are single-request, low-risk modules that are bounded by allowlist validation, policy-backed timeout and rate limits, and audit logging. Explicit stop/cancel support is required before adding multi-request or long-running active modules.
+Current active checks are single-request, low-risk modules that are bounded by allowlist validation, policy-backed timeout and rate limits, and audit logging. Timeout is the effective stop boundary for these synchronous checks. Explicit stop/cancel support is required before adding multi-request or long-running active modules.
+
+Implemented active-low-risk modules:
+
+- `lab_xss_reflection_check`: harmless reflected-input marker check.
+- `lab_http_methods_check`: one-request HTTP OPTIONS method check.
+- `lab_route_exists_check`: one-request HEAD check for one known route path.
 
 ## Lab Targets
 

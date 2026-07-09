@@ -12,4 +12,6 @@ Requirements:
 - Audit logging.
 - Lab-only target enforcement.
 
+Current active-low-risk tools are single-request checks where timeout is the stop boundary. Multi-request or long-running active tools require explicit stop/cancel support before implementation.
+
 High-risk tools should not be added until the safety layer is fully implemented and tested.
