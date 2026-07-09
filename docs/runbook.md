@@ -23,6 +23,7 @@ Use this runbook when another AI agent or automation system needs to operate thi
 7. Run single-request, low-risk active tools only against approved lab targets.
 8. Write audit logs for every tool call.
 9. Write reports under `reports/`.
+10. Use the job registry and cancellation token for any future multi-request active tool.
 
 ## Stop Conditions
 
@@ -32,7 +33,7 @@ Stop immediately if:
 - The target resolves to a public IP or third-party domain.
 - A tool request asks for denial of service, credential stuffing, destructive exploitation, or lateral movement.
 - Rate limits or timeouts are missing for an active tool.
-- A multi-request or long-running active tool is requested before stop/cancel support exists.
+- A multi-request or long-running active tool does not use the job registry and cancellation token.
 - Audit logging cannot be written.
 
 ## Common Commands

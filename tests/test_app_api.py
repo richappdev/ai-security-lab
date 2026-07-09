@@ -256,6 +256,55 @@ class FastAPITests(unittest.TestCase):
         page = TestClient(app).get("/ui/")
         self.assertEqual(page.status_code, 200)
         self.assertIn("AI Security Lab Dashboard", page.text)
+        self.assertIn("route existence", page.text)
+
+    def test_static_ui_exposes_route_exists_check(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        client = TestClient(app)
+        review_page = client.get("/ui/repo-review.html")
+        testing_page = client.get("/ui/testing.html")
+
+        self.assertEqual(review_page.status_code, 200)
+        self.assertEqual(testing_page.status_code, 200)
+        self.assertIn("route existence", review_page.text)
+        self.assertIn("Route existence", testing_page.text)
+        self.assertIn("six built-in checks", testing_page.text)
+
+    def test_job_endpoints_read_and_cancel_registered_job(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+        from app.api.jobs import job_registry
+
+        job_id = "job-api-cancel-test"
+        job_registry.create_job(
+            job_id=job_id,
+            tool="future_bulk_route_check",
+            target="http://127.0.0.1:3000",
+            operator="api-test",
+        )
+
+        client = TestClient(app)
+        read_response = client.get(f"/jobs/{job_id}")
+        cancel_response = client.post(f"/jobs/{job_id}/cancel")
+
+        self.assertEqual(read_response.status_code, 200)
+        self.assertEqual(read_response.json()["status"], "queued")
+        self.assertEqual(cancel_response.status_code, 200)
+        self.assertEqual(cancel_response.json()["status"], "cancel_requested")
+
+    def test_job_endpoints_return_404_for_missing_job(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        client = TestClient(app)
+
+        self.assertEqual(client.get("/jobs/missing-job").status_code, 404)
+        self.assertEqual(client.post("/jobs/missing-job/cancel").status_code, 404)
 
     def test_passive_headers_endpoint(self):
         from fastapi.testclient import TestClient

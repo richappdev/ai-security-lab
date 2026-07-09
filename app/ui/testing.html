@@ -26,9 +26,9 @@
           <div>
             <p class="eyebrow">Testing Method and Results</p>
             <h1>Latest local lab scan</h1>
-            <p class="lede">The latest run validated both lab targets and executed five built-in checks against each allowlisted target.</p>
+            <p class="lede">The latest run validated both lab targets and executed six built-in checks against each allowlisted target.</p>
           </div>
-          <span class="status-pill">31 passed, 4 skipped</span>
+          <span class="status-pill">47 passed, 9 skipped</span>
         </div>
 
         <section class="grid three">
@@ -38,11 +38,11 @@
           </div>
           <div class="panel metric">
             <span>Tool runs</span>
-            <strong>10</strong>
+            <strong>12</strong>
           </div>
           <div class="panel metric">
             <span>Unit tests</span>
-            <strong>35</strong>
+            <strong>56</strong>
           </div>
         </section>
 
@@ -52,7 +52,7 @@
             <li>Started Docker Compose services for the security API, Juice Shop, and DVWA.</li>
             <li>Validated Juice Shop and DVWA over localhost with HTTP 200 responses.</li>
             <li>Ran passive checks: headers, cookies, and form discovery.</li>
-            <li>Ran low-risk active checks: reflected-input marker and HTTP OPTIONS method check.</li>
+            <li>Ran low-risk active checks: reflected-input marker, HTTP OPTIONS method check, and known route existence check.</li>
             <li>Generated Markdown reports under the reports directory.</li>
           </ol>
         </section>
@@ -107,6 +107,13 @@
                   <td>OPTIONS did not include an Allow header.</td>
                 </tr>
                 <tr>
+                  <td>Juice Shop</td>
+                  <td>Route existence</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Single-request HEAD check confirmed a known allowlisted route.</td>
+                </tr>
+                <tr>
                   <td>DVWA</td>
                   <td>Headers</td>
                   <td><span class="tag ok">Completed</span></td>
@@ -140,6 +147,13 @@
                   <td><span class="tag error">Failed</span></td>
                   <td>302</td>
                   <td>The tool received HTTP 302 Found and did not follow the redirect.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>Route existence</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Single-request HEAD check confirmed a known allowlisted route.</td>
                 </tr>
               </tbody>
             </table>

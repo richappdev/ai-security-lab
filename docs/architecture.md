@@ -33,13 +33,22 @@ User request
 
 ## Active Execution Boundary
 
-Current active checks are single-request, low-risk modules that are bounded by allowlist validation, policy-backed timeout and rate limits, and audit logging. Timeout is the effective stop boundary for these synchronous checks. Explicit stop/cancel support is required before adding multi-request or long-running active modules.
+Current active checks are single-request, low-risk modules that are bounded by allowlist validation, policy-backed timeout and rate limits, and audit logging. Timeout is the effective stop boundary for these synchronous checks. Future multi-request or long-running active modules must run through the in-process job registry and check a cancellation token between network requests.
 
 Implemented active-low-risk modules:
 
 - `lab_xss_reflection_check`: harmless reflected-input marker check.
 - `lab_http_methods_check`: one-request HTTP OPTIONS method check.
 - `lab_route_exists_check`: one-request HEAD check for one known route path.
+
+## Job Control
+
+The FastAPI app exposes a minimal in-process job control surface for future cancellable tools:
+
+- `GET /jobs/{job_id}` returns status, timestamps, target, tool, operator, and result or error when available.
+- `POST /jobs/{job_id}/cancel` requests cancellation for queued or running work.
+
+Job states are `queued`, `running`, `completed`, `failed`, `cancel_requested`, and `cancelled`. Cancelled jobs write audit records with `status: cancelled`.
 
 ## Lab Targets
 

@@ -6,11 +6,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.api.jobs import JobNotFoundError, job_registry
 from app.api.service import (
     DEFAULT_OPERATOR,
     DEFAULT_TIMEOUT_SECONDS,
@@ -67,6 +68,19 @@ class HealthResponse(BaseModel):
     service: str
 
 
+class JobResponse(BaseModel):
+    job_id: str
+    tool: str
+    target: str
+    operator: str
+    status: str
+    created_at: str
+    started_at: str | None = None
+    ended_at: str | None = None
+    result: dict[str, Any] | None = None
+    error: str | None = None
+
+
 app = FastAPI(
     title="AI Security Lab API",
     version="0.1.0",
@@ -84,6 +98,22 @@ def dashboard() -> RedirectResponse:
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(status="ok", service="security-app")
+
+
+@app.get("/jobs/{job_id}", response_model=JobResponse)
+def get_job(job_id: str) -> dict[str, Any]:
+    try:
+        return job_registry.snapshot(job_id)
+    except JobNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="job not found") from exc
+
+
+@app.post("/jobs/{job_id}/cancel", response_model=JobResponse)
+def cancel_job(job_id: str) -> dict[str, Any]:
+    try:
+        return job_registry.cancel_job(job_id)
+    except JobNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="job not found") from exc
 
 
 @app.post("/scan/passive/headers")

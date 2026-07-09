@@ -34,6 +34,8 @@ Completed:
 - `tools/active/xss_lab_check.py` for a harmless reflected-input lab check.
 - `tools/active/http_methods_check.py` for a one-request HTTP OPTIONS method check.
 - `tools/active/route_exists_check.py` for a one-request known-route existence check.
+- Static UI exposure for the route existence check.
+- In-process FastAPI job registry with job status and cancellation endpoints.
 - Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
 
@@ -41,7 +43,7 @@ Not started:
 
 - SQLite-backed audit storage.
 - Multi-request or long-running active scans.
-- Background job execution and explicit cancellation support.
+- Redis/Celery-backed background execution.
 
 ## Safety Boundary
 
@@ -50,7 +52,7 @@ Not started:
 - Do not scan or attack public IPs, public Taiwan websites, government sites, schools, companies, or unknown third-party assets.
 - Require explicit allowlist checks before any active module runs.
 - Require allowlist checks, rate limits, timeouts, risk labels, and audit logs for every active test.
-- Require explicit cancellation support before adding multi-request or long-running active tests.
+- Require in-process job-registry cancellation support before adding multi-request or long-running active tests.
 - Require an extra confirmation step before high-risk modules run.
 
 ## MVP Scope
@@ -140,16 +142,15 @@ These must run only in a separate isolated lab profile with stricter limits and 
 - Done: write append-only JSONL audit records.
 - Done: label results as `passive` or `active-low-risk`.
 - Done: document that current single-request active tools are timeout-bound.
-- Next: define stop/cancel support before adding multi-request or long-running active modules.
+- Done: define in-process stop/cancel support before adding multi-request or long-running active modules.
 - Later: add SQLite-backed audit storage when queryability is needed.
 
 ## Next Milestones
 
 1. Keep `PLAN.md`, `README.md`, `docs/architecture.md`, and `tools/manifest.yml` synchronized as the source of truth for implementation status.
-2. Define the stop/cancel implementation model before adding bulk route checks, crawlers, or other multi-request active modules.
-3. Review whether `lab_route_exists_check` should be exposed in the static UI after API-level verification against live lab containers.
-4. Move audit logging to SQLite only when queryability is needed.
-5. Add Redis/Celery only after background jobs are needed.
+2. Require future bulk route checks, crawlers, or other multi-request active modules to use the in-process job/cancel model.
+3. Move audit logging to SQLite only when queryability is needed.
+4. Add Redis/Celery only after background jobs need process isolation or durable queues.
 
 ## Active Cancellation Boundary
 
@@ -159,7 +160,12 @@ Current single-request active tools are timeout-bound and run synchronously:
 - `lab_http_methods_check`
 - `lab_route_exists_check`
 
-Multi-request active tools must not be added until a stop/cancel design exists. Bulk route discovery, crawling, credential checks, exploit validation, and long-running probes require either a cancellable in-process job registry or a background worker model with job status and cancellation endpoints.
+Multi-request active tools must not be added unless they use the in-process job registry and cancellation token. Bulk route discovery, crawling, credential checks, exploit validation, and long-running probes must expose job status and support cancellation between network requests and before report writing. Redis/Celery remains a future option only when durable or cross-process background work is justified.
+
+Job control API:
+
+- `GET /jobs/{job_id}` returns job status, timestamps, target, tool, operator, and result or error when available.
+- `POST /jobs/{job_id}/cancel` requests cancellation for queued or running jobs and returns the updated job status.
 
 ## Operating Commands
 

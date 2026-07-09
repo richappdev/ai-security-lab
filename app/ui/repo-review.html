@@ -50,6 +50,7 @@
               <li><span class="tag info">Passive</span> Same-page form discovery.</li>
               <li><span class="tag warn">Active low risk</span> Harmless reflected-input marker check.</li>
               <li><span class="tag warn">Active low risk</span> One-request HTTP OPTIONS method check.</li>
+              <li><span class="tag warn">Active low risk</span> One-request route existence check for a known path.</li>
             </ul>
           </div>
         </section>
@@ -94,8 +95,9 @@
         <section class="panel soft" style="margin-top: 18px;">
           <h2>Review Notes</h2>
           <ul class="list">
-            <li>The current API exposes three scan endpoints: passive headers, reflected-input, and HTTP methods.</li>
+            <li>The current API exposes four scan endpoints: passive headers, reflected-input, HTTP methods, and route existence.</li>
             <li>Cookie and form tools exist as modules but are not yet exposed as API endpoints.</li>
+            <li>Route existence is exposed in the static UI as a single-request, allowlist-bound check.</li>
             <li>Report generation is Markdown-based and suitable for local audit trails.</li>
           </ul>
         </section>
