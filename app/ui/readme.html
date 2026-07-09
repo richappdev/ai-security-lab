@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>README - AI Security Lab</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <strong>AI Security Lab</strong>
+          <span>Local authorized testing workspace</span>
+        </div>
+        <nav class="nav" aria-label="Project pages">
+          <a href="/ui/">Overview</a>
+          <a href="/ui/repo-review.html">Repo Review</a>
+          <a href="/ui/readme.html" aria-current="page">README</a>
+          <a href="/ui/testing.html">Testing Results</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">README Description</p>
+            <h1>How to run and use the lab</h1>
+            <p class="lede">This project provides a local Docker environment for building and testing security tools safely.</p>
+          </div>
+        </div>
+
+        <section class="grid two">
+          <div class="panel">
+            <h2>Requirements</h2>
+            <ul class="list">
+              <li>Docker Desktop</li>
+              <li>Docker Compose v2</li>
+              <li>PowerShell</li>
+              <li>Python for local unit tests</li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h2>Included Targets</h2>
+            <ul class="list">
+              <li>OWASP Juice Shop at <strong>http://127.0.0.1:3000</strong></li>
+              <li>DVWA at <strong>http://127.0.0.1:8080</strong></li>
+              <li>Security API at <strong>http://127.0.0.1:8000</strong></li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top: 18px;">
+          <h2>Start Commands</h2>
+          <pre class="code">powershell -ExecutionPolicy Bypass -File .\scripts\check-prereqs.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\start-lab.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\validate-lab.ps1</pre>
+        </section>
+
+        <section class="panel" style="margin-top: 18px;">
+          <h2>Example API Calls</h2>
+          <pre class="code">Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/scan/passive/headers `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user"}'
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/scan/active/http-methods `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user","rate_limit_per_minute":30}'</pre>
+        </section>
+
+        <section class="panel soft" style="margin-top: 18px;">
+          <h2>Operating Rule</h2>
+          <p>Browser access uses localhost URLs. API scan requests use Docker network aliases such as <strong>juice-shop.local</strong> because the API container makes the target request from inside the lab network.</p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

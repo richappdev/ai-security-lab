@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.api.service import (
@@ -59,6 +61,13 @@ app = FastAPI(
     version="0.1.0",
     description="Local-only API for guarded security lab tools.",
 )
+
+app.mount("/ui", StaticFiles(directory=configured_repo_root() / "app" / "ui", html=True), name="ui")
+
+
+@app.get("/", include_in_schema=False)
+def dashboard() -> RedirectResponse:
+    return RedirectResponse(url="/ui/")
 
 
 @app.get("/health", response_model=HealthResponse)

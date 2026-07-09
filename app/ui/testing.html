@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Testing Results - AI Security Lab</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <strong>AI Security Lab</strong>
+          <span>Local authorized testing workspace</span>
+        </div>
+        <nav class="nav" aria-label="Project pages">
+          <a href="/ui/">Overview</a>
+          <a href="/ui/repo-review.html">Repo Review</a>
+          <a href="/ui/readme.html">README</a>
+          <a href="/ui/testing.html" aria-current="page">Testing Results</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Testing Method and Results</p>
+            <h1>Latest local lab scan</h1>
+            <p class="lede">The latest run validated both lab targets and executed five built-in checks against each allowlisted target.</p>
+          </div>
+          <span class="status-pill">31 passed, 4 skipped</span>
+        </div>
+
+        <section class="grid three">
+          <div class="panel metric">
+            <span>Targets validated</span>
+            <strong>2</strong>
+          </div>
+          <div class="panel metric">
+            <span>Tool runs</span>
+            <strong>10</strong>
+          </div>
+          <div class="panel metric">
+            <span>Unit tests</span>
+            <strong>35</strong>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top: 18px;">
+          <h2>Method</h2>
+          <ol class="list">
+            <li>Started Docker Compose services for the security API, Juice Shop, and DVWA.</li>
+            <li>Validated Juice Shop and DVWA over localhost with HTTP 200 responses.</li>
+            <li>Ran passive checks: headers, cookies, and form discovery.</li>
+            <li>Ran low-risk active checks: reflected-input marker and HTTP OPTIONS method check.</li>
+            <li>Generated Markdown reports under the reports directory.</li>
+          </ol>
+        </section>
+
+        <section class="panel" style="margin-top: 18px;">
+          <h2>Results</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Target</th>
+                  <th>Check</th>
+                  <th>Status</th>
+                  <th>HTTP</th>
+                  <th>Key result</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Juice Shop</td>
+                  <td>Headers</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Missing CSP, Referrer-Policy, Permissions-Policy, and HSTS.</td>
+                </tr>
+                <tr>
+                  <td>Juice Shop</td>
+                  <td>Cookies</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>No Set-Cookie headers observed.</td>
+                </tr>
+                <tr>
+                  <td>Juice Shop</td>
+                  <td>Forms</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>No forms observed on the fetched page.</td>
+                </tr>
+                <tr>
+                  <td>Juice Shop</td>
+                  <td>XSS reflection</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Harmless marker was not reflected.</td>
+                </tr>
+                <tr>
+                  <td>Juice Shop</td>
+                  <td>HTTP methods</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>204</td>
+                  <td>OPTIONS did not include an Allow header.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>Headers</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Missing CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, and HSTS.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>Cookies</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>PHPSESSID and security cookies missing HttpOnly, Secure, and SameSite attributes.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>Forms</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>One same-origin form found with no finding reported.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>XSS reflection</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Harmless marker was not reflected.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>HTTP methods</td>
+                  <td><span class="tag error">Failed</span></td>
+                  <td>302</td>
+                  <td>The tool received HTTP 302 Found and did not follow the redirect.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel soft" style="margin-top: 18px;">
+          <h2>Report File</h2>
+          <p>Consolidated Markdown report: <strong>reports/manual-lab-scan-20260708-summary.md</strong></p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Repo Review - AI Security Lab</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <strong>AI Security Lab</strong>
+          <span>Local authorized testing workspace</span>
+        </div>
+        <nav class="nav" aria-label="Project pages">
+          <a href="/ui/">Overview</a>
+          <a href="/ui/repo-review.html" aria-current="page">Repo Review</a>
+          <a href="/ui/readme.html">README</a>
+          <a href="/ui/testing.html">Testing Results</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Repository Review</p>
+            <h1>Guarded testing architecture</h1>
+            <p class="lede">The project is organized around a local API, safety controls, tool modules, lab targets, and generated reports.</p>
+          </div>
+        </div>
+
+        <section class="grid two">
+          <div class="panel">
+            <h2>Core Areas</h2>
+            <ul class="list">
+              <li><strong>app/</strong> FastAPI entrypoint, service wiring, and static dashboard pages.</li>
+              <li><strong>safety/</strong> allowlist enforcement, rate limits, policy checks, and audit logging.</li>
+              <li><strong>tools/</strong> passive inspection and low-risk active checks.</li>
+              <li><strong>reports/</strong> Markdown output from scan runs.</li>
+              <li><strong>tests/</strong> unit tests for API, tools, reports, and safety behavior.</li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h2>Implemented Tools</h2>
+            <ul class="list">
+              <li><span class="tag info">Passive</span> HTTP response header inspection.</li>
+              <li><span class="tag info">Passive</span> Cookie attribute inspection.</li>
+              <li><span class="tag info">Passive</span> Same-page form discovery.</li>
+              <li><span class="tag warn">Active low risk</span> Harmless reflected-input marker check.</li>
+              <li><span class="tag warn">Active low risk</span> One-request HTTP OPTIONS method check.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top: 18px;">
+          <h2>Safety Review</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Control</th>
+                  <th>Location</th>
+                  <th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Target allowlist</td>
+                  <td>targets.allowlist</td>
+                  <td>Restricts scans to local lab URLs.</td>
+                </tr>
+                <tr>
+                  <td>Scope guard</td>
+                  <td>safety/scope_guard.py</td>
+                  <td>Rejects non-local or non-allowlisted targets before network access.</td>
+                </tr>
+                <tr>
+                  <td>Policy limits</td>
+                  <td>safety/policy.yml</td>
+                  <td>Defines timeout and request-rate boundaries.</td>
+                </tr>
+                <tr>
+                  <td>Audit log</td>
+                  <td>safety/audit_log.py</td>
+                  <td>Records every tool run with target, status, and result summary.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel soft" style="margin-top: 18px;">
+          <h2>Review Notes</h2>
+          <ul class="list">
+            <li>The current API exposes three scan endpoints: passive headers, reflected-input, and HTTP methods.</li>
+            <li>Cookie and form tools exist as modules but are not yet exposed as API endpoints.</li>
+            <li>Report generation is Markdown-based and suitable for local audit trails.</li>
+          </ul>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

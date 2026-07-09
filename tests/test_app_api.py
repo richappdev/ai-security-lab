@@ -210,6 +210,21 @@ class FastAPITests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
 
+    def test_dashboard_redirects_to_static_ui(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        client = TestClient(app, follow_redirects=False)
+        response = client.get("/")
+
+        self.assertEqual(response.status_code, 307)
+        self.assertEqual(response.headers["location"], "/ui/")
+
+        page = TestClient(app).get("/ui/")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("AI Security Lab Dashboard", page.text)
+
     def test_passive_headers_endpoint(self):
         from fastapi.testclient import TestClient
 

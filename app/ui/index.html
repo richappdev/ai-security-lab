@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Security Lab Dashboard</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <strong>AI Security Lab</strong>
+          <span>Local authorized testing workspace</span>
+        </div>
+        <nav class="nav" aria-label="Project pages">
+          <a href="/ui/" aria-current="page">Overview</a>
+          <a href="/ui/repo-review.html">Repo Review</a>
+          <a href="/ui/readme.html">README</a>
+          <a href="/ui/testing.html">Testing Results</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Project Dashboard</p>
+            <h1>AI Security Lab</h1>
+            <p class="lede">A localhost-only Docker lab for developing guarded security tools against intentionally vulnerable targets.</p>
+          </div>
+          <span class="status-pill">Lab validated</span>
+        </div>
+
+        <section class="grid three" aria-label="Environment summary">
+          <div class="panel metric">
+            <span>Security API</span>
+            <strong>127.0.0.1:8000</strong>
+          </div>
+          <div class="panel metric">
+            <span>Targets</span>
+            <strong>2 local apps</strong>
+          </div>
+          <div class="panel metric">
+            <span>Built-in checks</span>
+            <strong>5 tools</strong>
+          </div>
+        </section>
+
+        <section class="grid two" style="margin-top: 18px;">
+          <div class="panel">
+            <h2>Quick Links</h2>
+            <ul class="list">
+              <li><a href="/docs">OpenAPI documentation</a></li>
+              <li><a href="/health">API health endpoint</a></li>
+              <li><a href="http://127.0.0.1:3000">OWASP Juice Shop</a></li>
+              <li><a href="http://127.0.0.1:8080">DVWA</a></li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h2>Safe Scope</h2>
+            <div class="callouts">
+              <div class="callout">Use only targets listed in <strong>targets.allowlist</strong>.</div>
+              <div class="callout">Keep bind addresses on <strong>127.0.0.1</strong>.</div>
+              <div class="callout">Run passive checks before low-risk active checks.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top: 18px;">
+          <h2>Page Map</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Page</th>
+                  <th>Purpose</th>
+                  <th>Best use</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><a href="/ui/repo-review.html">Repo Review</a></td>
+                  <td>Repository structure, safety layers, and implementation coverage.</td>
+                  <td>Understand what exists before adding new tools.</td>
+                </tr>
+                <tr>
+                  <td><a href="/ui/readme.html">README</a></td>
+                  <td>Human-readable project description and startup commands.</td>
+                  <td>Onboard a new operator to the lab.</td>
+                </tr>
+                <tr>
+                  <td><a href="/ui/testing.html">Testing Results</a></td>
+                  <td>Method, scope, and latest local scan findings.</td>
+                  <td>Review evidence from the last lab run.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <p class="footer">Generated as a static local dashboard served by the FastAPI app.</p>
+      </main>
+    </div>
+  </body>
+</html>
