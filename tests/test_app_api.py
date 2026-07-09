@@ -8,6 +8,7 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from app.api.service import (
+    run_active_auth_page_metadata_scan,
     run_active_http_methods_scan,
     run_active_route_exists_scan,
     run_active_security_header_delta_scan,
@@ -124,6 +125,24 @@ def security_header_delta_opener(request, timeout):
     if request.full_url == "http://127.0.0.1:3000/login":
         return FakeRouteResponse()
     raise AssertionError(f"unexpected URL: {request.full_url}")
+
+
+class FakeAuthMetadataResponse:
+    status = 200
+    headers = {"Content-Type": "text/html"}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self):
+        return b"<html><title>Login</title><form><input name='username'><input type='password'></form></html>"
+
+
+def auth_metadata_opener(request, timeout):
+    return FakeAuthMetadataResponse()
 
 
 class AppServiceTests(unittest.TestCase):
@@ -245,6 +264,22 @@ class AppServiceTests(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertIn("delta", result)
 
+    def test_active_auth_page_metadata_service_calls_guarded_tool(self):
+        with self.make_repo() as repo:
+            result = run_active_auth_page_metadata_scan(
+                target="http://127.0.0.1:3000",
+                route_path="/login",
+                operator="api-test",
+                run_id="run-api-auth-metadata-test",
+                repo_root=repo,
+                opener=auth_metadata_opener,
+            )
+
+        self.assertEqual(result["tool"], "lab_auth_page_metadata_check")
+        self.assertEqual(result["risk"], "active-low-risk")
+        self.assertEqual(result["status"], "completed")
+        self.assertTrue(result["metadata"]["has_login_indicators"])
+
 
 @unittest.skipUnless(importlib.util.find_spec("fastapi"), "FastAPI is not installed")
 class FastAPITests(unittest.TestCase):
@@ -282,7 +317,7 @@ class FastAPITests(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn("AI Security Lab Dashboard", page.text)
         self.assertIn("route existence", page.text)
-        self.assertIn("7 tools", page.text)
+        self.assertIn("8 tools", page.text)
 
     def test_static_ui_exposes_active_checks(self):
         from fastapi.testclient import TestClient
@@ -297,9 +332,11 @@ class FastAPITests(unittest.TestCase):
         self.assertEqual(testing_page.status_code, 200)
         self.assertIn("route existence", review_page.text)
         self.assertIn("security header delta", review_page.text)
+        self.assertIn("authentication page metadata", review_page.text)
         self.assertIn("Route existence", testing_page.text)
         self.assertIn("Header delta", testing_page.text)
-        self.assertIn("seven built-in checks", testing_page.text)
+        self.assertIn("Auth metadata", testing_page.text)
+        self.assertIn("eight built-in checks", testing_page.text)
 
     def test_job_endpoints_read_and_cancel_registered_job(self):
         from fastapi.testclient import TestClient
@@ -527,6 +564,46 @@ class FastAPITests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "completed")
 
+    def test_active_auth_page_metadata_endpoint(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        with self.make_repo() as repo:
+            with patch("app.api.main.configured_repo_root", return_value=Path(repo)):
+                with patch(
+                    "app.api.main.run_active_auth_page_metadata_scan",
+                    return_value={
+                        "tool": "lab_auth_page_metadata_check",
+                        "target": "http://127.0.0.1:3000",
+                        "route_path": "/login",
+                        "route_url": "http://127.0.0.1:3000/login",
+                        "risk": "active-low-risk",
+                        "status": "completed",
+                        "http_status": 200,
+                        "headers": {},
+                        "metadata": {"has_login_indicators": True},
+                        "findings": [],
+                        "started_at": "2026-07-07T00:00:00Z",
+                        "ended_at": "2026-07-07T00:00:01Z",
+                    },
+                ):
+                    client = TestClient(app)
+                    response = client.post(
+                        "/scan/active/auth-page-metadata",
+                        json={
+                            "target": "http://127.0.0.1:3000",
+                            "route_path": "/login",
+                            "operator": "api-test",
+                            "run_id": "run-api-auth-metadata-test",
+                            "rate_limit_per_minute": 30,
+                            "generate_report": True,
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "completed")
+
     def test_active_security_header_delta_schema_includes_route_path(self):
         from fastapi.testclient import TestClient
 
@@ -535,6 +612,18 @@ class FastAPITests(unittest.TestCase):
         client = TestClient(app)
         schema = client.get("/openapi.json").json()
         request_schema = schema["components"]["schemas"]["ActiveSecurityHeaderDeltaRequest"]
+
+        self.assertIn("route_path", request_schema["properties"])
+        self.assertIn("route_path", request_schema["required"])
+
+    def test_active_auth_page_metadata_schema_includes_route_path(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        client = TestClient(app)
+        schema = client.get("/openapi.json").json()
+        request_schema = schema["components"]["schemas"]["ActiveAuthPageMetadataRequest"]
 
         self.assertIn("route_path", request_schema["properties"])
         self.assertIn("route_path", request_schema["required"])

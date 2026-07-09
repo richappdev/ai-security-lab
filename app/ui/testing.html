@@ -26,9 +26,9 @@
           <div>
             <p class="eyebrow">Testing Method and Results</p>
             <h1>Latest local lab scan</h1>
-            <p class="lede">The latest run validated both lab targets and executed seven built-in checks against each allowlisted target.</p>
+            <p class="lede">The latest run validated both lab targets and executed eight built-in checks against each allowlisted target.</p>
           </div>
-          <span class="status-pill">69 run, 11 skipped</span>
+          <span class="status-pill">79 run, 13 skipped</span>
         </div>
 
         <section class="grid three">
@@ -38,11 +38,11 @@
           </div>
           <div class="panel metric">
             <span>Tool runs</span>
-            <strong>14</strong>
+            <strong>16</strong>
           </div>
           <div class="panel metric">
             <span>Unit tests</span>
-            <strong>69</strong>
+            <strong>79</strong>
           </div>
         </section>
 
@@ -52,7 +52,7 @@
             <li>Started Docker Compose services for the security API, Juice Shop, and DVWA.</li>
             <li>Validated Juice Shop and DVWA over localhost with HTTP 200 responses.</li>
             <li>Ran passive checks: headers, cookies, and form discovery.</li>
-            <li>Ran low-risk active checks: reflected-input marker, HTTP OPTIONS method check, known route existence check, and security header delta check.</li>
+            <li>Ran low-risk active checks: reflected-input marker, HTTP OPTIONS method check, known route existence check, security header delta check, and authentication page metadata check.</li>
             <li>Generated Markdown reports under the reports directory.</li>
           </ol>
         </section>
@@ -121,6 +121,13 @@
                   <td>Two-request GET check compared root and known-route security headers.</td>
                 </tr>
                 <tr>
+                  <td>Juice Shop</td>
+                  <td>Auth metadata</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>GET-only check inspected known authentication route metadata without submitting credentials.</td>
+                </tr>
+                <tr>
                   <td>DVWA</td>
                   <td>Headers</td>
                   <td><span class="tag ok">Completed</span></td>
@@ -168,6 +175,13 @@
                   <td><span class="tag ok">Completed</span></td>
                   <td>200</td>
                   <td>Two-request GET check compared root and known-route security headers.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>Auth metadata</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>GET-only check inspected known authentication route metadata without submitting credentials.</td>
                 </tr>
               </tbody>
             </table>

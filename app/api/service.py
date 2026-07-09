@@ -8,6 +8,7 @@ from urllib.request import urlopen
 from uuid import uuid4
 
 from reports.writer import write_markdown_report
+from tools.active.auth_page_metadata_check import lab_auth_page_metadata_check
 from tools.active.http_methods_check import lab_http_methods_check
 from tools.active.route_exists_check import lab_route_exists_check
 from tools.active.security_header_delta_check import lab_security_header_delta_check
@@ -165,6 +166,39 @@ def run_active_security_header_delta_scan(
     actual_run_id = run_id or new_run_id()
     actual_repo_root = repo_root or default_repo_root()
     result = lab_security_header_delta_check(
+        target=target,
+        route_path=route_path,
+        operator=operator or DEFAULT_OPERATOR,
+        run_id=actual_run_id,
+        timeout_seconds=timeout_seconds,
+        rate_limit_per_minute=rate_limit_per_minute,
+        repo_root=actual_repo_root,
+        opener=opener,
+    )
+    if generate_report:
+        result["report"] = write_markdown_report(
+            result,
+            operator=operator or DEFAULT_OPERATOR,
+            run_id=actual_run_id,
+            repo_root=actual_repo_root,
+        )
+    return result
+
+
+def run_active_auth_page_metadata_scan(
+    target: str,
+    route_path: str,
+    operator: str = DEFAULT_OPERATOR,
+    run_id: str | None = None,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    rate_limit_per_minute: int | None = None,
+    repo_root: str | Path | None = None,
+    opener: Callable[..., Any] = urlopen,
+    generate_report: bool = False,
+) -> dict[str, Any]:
+    actual_run_id = run_id or new_run_id()
+    actual_repo_root = repo_root or default_repo_root()
+    result = lab_auth_page_metadata_check(
         target=target,
         route_path=route_path,
         operator=operator or DEFAULT_OPERATOR,

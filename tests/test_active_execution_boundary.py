@@ -18,6 +18,7 @@ class ActiveExecutionBoundaryTests(unittest.TestCase):
             "lab_xss_reflection_check",
             "lab_http_methods_check",
             "lab_route_exists_check",
+            "lab_auth_page_metadata_check",
         ):
             tool_section_start = manifest.index(f"- name: {tool_name}")
             next_tool_start = manifest.find("\n  - name:", tool_section_start + 1)

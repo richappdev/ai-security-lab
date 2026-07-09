@@ -20,6 +20,7 @@ The FastAPI app exposes:
 - `POST /scan/active/http-methods`
 - `POST /scan/active/route-exists`
 - `POST /scan/active/security-header-delta`
+- `POST /scan/active/auth-page-metadata`
 - `GET /jobs/{job_id}`
 - `POST /jobs/{job_id}/cancel`
 
@@ -63,6 +64,16 @@ Active security header delta example:
 Invoke-RestMethod `
   -Method Post `
   -Uri http://127.0.0.1:8000/scan/active/security-header-delta `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","route_path":"/login","operator":"local-user","rate_limit_per_minute":30}'
+```
+
+Active auth page metadata example:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/scan/active/auth-page-metadata `
   -ContentType application/json `
   -Body '{"target":"http://juice-shop.local:3000","route_path":"/login","operator":"local-user","rate_limit_per_minute":30}'
 ```

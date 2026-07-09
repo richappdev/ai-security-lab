@@ -20,5 +20,6 @@ Implemented active-low-risk tools:
 - `lab_http_methods_check`: single-request HTTP OPTIONS method check.
 - `lab_route_exists_check`: single-request known-route existence check.
 - `lab_security_header_delta_check`: fixed two-request security header comparison between root and one known route.
+- `lab_auth_page_metadata_check`: single-request GET-only authentication page metadata check without credential submission.
 
 High-risk tools should not be added until the safety layer is fully implemented and tested.

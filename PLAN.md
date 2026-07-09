@@ -15,7 +15,7 @@ Build a local, repeatable, and legally safe testing environment for developing a
 - Python safety guard for allowlist and local-lab target checks
 - JSONL audit logging under `logs/`
 - Passive tools: `inspect_headers`, `inspect_cookies`, `discover_forms`
-- Active low-risk tools: `lab_xss_reflection_check`, `lab_http_methods_check`, `lab_route_exists_check`
+- Active low-risk tools: `lab_xss_reflection_check`, `lab_http_methods_check`, `lab_route_exists_check`, `lab_security_header_delta_check`, `lab_auth_page_metadata_check`
 - FastAPI `security-app` service at `http://127.0.0.1:8000`
 
 ## Implementation Status
@@ -34,11 +34,13 @@ Completed:
 - `tools/active/xss_lab_check.py` for a harmless reflected-input lab check.
 - `tools/active/http_methods_check.py` for a one-request HTTP OPTIONS method check.
 - `tools/active/route_exists_check.py` for a one-request known-route existence check.
-- Static UI exposure for the route existence check.
+- `tools/active/security_header_delta_check.py` for a fixed two-request security header comparison between root and one known route.
+- `tools/active/auth_page_metadata_check.py` for a one-request GET-only authentication page metadata check without credential submission.
+- Static UI exposure for the route existence, security header delta, and authentication page metadata checks.
 - In-process FastAPI job registry with job status and cancellation endpoints.
 - Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
-- Current verification: `python -m unittest discover -s tests` passes with 69 tests run and 11 skipped.
+- Current verification: `python -m unittest discover -s tests` passes with 79 tests run and 13 skipped.
 
 Not started:
 
@@ -150,10 +152,11 @@ Completed in this phase:
 
 - Safe route existence check against known lab-local paths via `lab_route_exists_check`.
 - Security header delta check between root and one known application route via `lab_security_header_delta_check`.
+- Non-mutating authentication page metadata check for DVWA/Juice Shop via `lab_auth_page_metadata_check`.
 
 Candidate checks:
 
-- Non-mutating authentication page metadata check for DVWA/Juice Shop.
+- None selected until the next human review.
 
 Constraints:
 
@@ -239,6 +242,7 @@ Current single-request active tools are timeout-bound and run synchronously:
 - `lab_xss_reflection_check`
 - `lab_http_methods_check`
 - `lab_route_exists_check`
+- `lab_auth_page_metadata_check`
 
 Current fixed two-request active tools are also timeout-bound and run synchronously:
 

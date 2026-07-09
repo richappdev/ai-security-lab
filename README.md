@@ -90,6 +90,7 @@ python -m unittest discover -s tests
 - `tools/active/http_methods_check.py` implements a one-request OPTIONS method check for allowlisted lab targets.
 - `tools/active/route_exists_check.py` implements a one-request HEAD route existence check for one known route path on an allowlisted lab target.
 - `tools/active/security_header_delta_check.py` implements a fixed two-request security header comparison between root and one known route on an allowlisted lab target.
+- `tools/active/auth_page_metadata_check.py` implements a one-request GET-only authentication page metadata check for one known route without submitting credentials.
 - `reports/writer.py` generates basic Markdown scan reports under `reports/`.
 - `app/api/jobs.py` provides an in-process job registry and cancellation token for future multi-request tools.
 - `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active checks.

@@ -41,6 +41,7 @@ Implemented active-low-risk modules:
 - `lab_http_methods_check`: one-request HTTP OPTIONS method check.
 - `lab_route_exists_check`: one-request HEAD check for one known route path.
 - `lab_security_header_delta_check`: fixed two-request GET comparison of security headers between root and one known route.
+- `lab_auth_page_metadata_check`: one-request GET-only authentication page metadata check for one known route without credential submission.
 
 ## Job Control
 

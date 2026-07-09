@@ -16,6 +16,7 @@ from app.api.service import (
     DEFAULT_OPERATOR,
     DEFAULT_TIMEOUT_SECONDS,
     default_repo_root,
+    run_active_auth_page_metadata_scan,
     run_active_http_methods_scan,
     run_active_route_exists_scan,
     run_active_security_header_delta_scan,
@@ -65,6 +66,16 @@ class ActiveRouteExistsRequest(BaseModel):
 
 
 class ActiveSecurityHeaderDeltaRequest(BaseModel):
+    target: str = Field(..., examples=["http://juice-shop.local:3000"])
+    route_path: str = Field(..., examples=["/login"], min_length=1)
+    operator: str = Field(DEFAULT_OPERATOR, min_length=1)
+    run_id: str | None = None
+    timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
+    rate_limit_per_minute: int | None = Field(default=None, ge=1, le=30)
+    generate_report: bool = False
+
+
+class ActiveAuthPageMetadataRequest(BaseModel):
     target: str = Field(..., examples=["http://juice-shop.local:3000"])
     route_path: str = Field(..., examples=["/login"], min_length=1)
     operator: str = Field(DEFAULT_OPERATOR, min_length=1)
@@ -182,6 +193,20 @@ def scan_active_route_exists(request: ActiveRouteExistsRequest) -> dict[str, Any
 @app.post("/scan/active/security-header-delta")
 def scan_active_security_header_delta(request: ActiveSecurityHeaderDeltaRequest) -> dict[str, Any]:
     return run_active_security_header_delta_scan(
+        target=request.target,
+        route_path=request.route_path,
+        operator=request.operator,
+        run_id=request.run_id,
+        timeout_seconds=request.timeout_seconds,
+        rate_limit_per_minute=request.rate_limit_per_minute,
+        repo_root=configured_repo_root(),
+        generate_report=request.generate_report,
+    )
+
+
+@app.post("/scan/active/auth-page-metadata")
+def scan_active_auth_page_metadata(request: ActiveAuthPageMetadataRequest) -> dict[str, Any]:
+    return run_active_auth_page_metadata_scan(
         target=request.target,
         route_path=request.route_path,
         operator=request.operator,
