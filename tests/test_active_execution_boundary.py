@@ -24,6 +24,14 @@ class ActiveExecutionBoundaryTests(unittest.TestCase):
             tool_section = manifest[tool_section_start:] if next_tool_start == -1 else manifest[tool_section_start:next_tool_start]
             self.assertIn("single-request", tool_section)
 
+    def test_security_header_delta_manifest_marks_fixed_two_request_tool(self):
+        manifest = Path("tools/manifest.yml").read_text(encoding="utf-8")
+
+        tool_section_start = manifest.index("- name: lab_security_header_delta_check")
+        next_tool_start = manifest.find("\n  - name:", tool_section_start + 1)
+        tool_section = manifest[tool_section_start:] if next_tool_start == -1 else manifest[tool_section_start:next_tool_start]
+        self.assertIn("fixed two-request", tool_section)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,13 @@ Requirements:
 - Audit logging.
 - Lab-only target enforcement.
 
-Current active-low-risk tools are single-request checks where timeout is the stop boundary. Multi-request or long-running active tools require explicit stop/cancel support before implementation.
+Current active-low-risk tools are fixed-size checks where timeout is the stop boundary. Multi-request or long-running active tools require explicit stop/cancel support before implementation.
+
+Implemented active-low-risk tools:
+
+- `lab_xss_reflection_check`: single-request reflected-input marker check.
+- `lab_http_methods_check`: single-request HTTP OPTIONS method check.
+- `lab_route_exists_check`: single-request known-route existence check.
+- `lab_security_header_delta_check`: fixed two-request security header comparison between root and one known route.
 
 High-risk tools should not be added until the safety layer is fully implemented and tested.

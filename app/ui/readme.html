@@ -70,7 +70,13 @@ Invoke-RestMethod `
   -Method Post `
   -Uri http://127.0.0.1:8000/scan/active/http-methods `
   -ContentType application/json `
-  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user","rate_limit_per_minute":30}'</pre>
+  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user","rate_limit_per_minute":30}'
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/scan/active/security-header-delta `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","route_path":"/login","operator":"local-user","rate_limit_per_minute":30}'</pre>
         </section>
 
         <section class="panel soft" style="margin-top: 18px;">

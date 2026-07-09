@@ -26,9 +26,9 @@
           <div>
             <p class="eyebrow">Testing Method and Results</p>
             <h1>Latest local lab scan</h1>
-            <p class="lede">The latest run validated both lab targets and executed six built-in checks against each allowlisted target.</p>
+            <p class="lede">The latest run validated both lab targets and executed seven built-in checks against each allowlisted target.</p>
           </div>
-          <span class="status-pill">56 run, 9 skipped</span>
+          <span class="status-pill">69 run, 11 skipped</span>
         </div>
 
         <section class="grid three">
@@ -38,11 +38,11 @@
           </div>
           <div class="panel metric">
             <span>Tool runs</span>
-            <strong>12</strong>
+            <strong>14</strong>
           </div>
           <div class="panel metric">
             <span>Unit tests</span>
-            <strong>56</strong>
+            <strong>69</strong>
           </div>
         </section>
 
@@ -52,7 +52,7 @@
             <li>Started Docker Compose services for the security API, Juice Shop, and DVWA.</li>
             <li>Validated Juice Shop and DVWA over localhost with HTTP 200 responses.</li>
             <li>Ran passive checks: headers, cookies, and form discovery.</li>
-            <li>Ran low-risk active checks: reflected-input marker, HTTP OPTIONS method check, and known route existence check.</li>
+            <li>Ran low-risk active checks: reflected-input marker, HTTP OPTIONS method check, known route existence check, and security header delta check.</li>
             <li>Generated Markdown reports under the reports directory.</li>
           </ol>
         </section>
@@ -114,6 +114,13 @@
                   <td>Single-request HEAD check confirmed a known allowlisted route.</td>
                 </tr>
                 <tr>
+                  <td>Juice Shop</td>
+                  <td>Header delta</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Two-request GET check compared root and known-route security headers.</td>
+                </tr>
+                <tr>
                   <td>DVWA</td>
                   <td>Headers</td>
                   <td><span class="tag ok">Completed</span></td>
@@ -154,6 +161,13 @@
                   <td><span class="tag ok">Completed</span></td>
                   <td>200</td>
                   <td>Single-request HEAD check confirmed a known allowlisted route.</td>
+                </tr>
+                <tr>
+                  <td>DVWA</td>
+                  <td>Header delta</td>
+                  <td><span class="tag ok">Completed</span></td>
+                  <td>200</td>
+                  <td>Two-request GET check compared root and known-route security headers.</td>
                 </tr>
               </tbody>
             </table>

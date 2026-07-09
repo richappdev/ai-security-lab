@@ -38,7 +38,7 @@ Completed:
 - In-process FastAPI job registry with job status and cancellation endpoints.
 - Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
-- Current verification: `python -m unittest discover -s tests` passes with 56 tests run and 9 skipped.
+- Current verification: `python -m unittest discover -s tests` passes with 69 tests run and 11 skipped.
 
 Not started:
 
@@ -149,10 +149,10 @@ Priority: Medium
 Completed in this phase:
 
 - Safe route existence check against known lab-local paths via `lab_route_exists_check`.
+- Security header delta check between root and one known application route via `lab_security_header_delta_check`.
 
 Candidate checks:
 
-- Security header delta check between root and known application routes.
 - Non-mutating authentication page metadata check for DVWA/Juice Shop.
 
 Constraints:
@@ -220,14 +220,14 @@ Acceptance criteria:
 - Done: enforce policy-backed timeout and request-rate limits in current tools.
 - Done: write append-only JSONL audit records.
 - Done: label results as `passive` or `active-low-risk`.
-- Done: document that current single-request active tools are timeout-bound.
+- Done: document that current fixed-size active tools are timeout-bound.
 - Done: define in-process stop/cancel support before adding multi-request or long-running active modules.
 - Later: add SQLite-backed audit storage when queryability is needed.
 
 ## Next Milestones
 
 1. Use the in-process job registry and cancellation token as the required foundation for any future bulk route checks, crawlers, credential checks, exploit validation, or other long-running probes.
-2. Keep current active checks limited to single-request, active-low-risk behavior unless a future tool passes human review and uses the job/cancel contract where needed.
+2. Keep current active checks limited to fixed-size, active-low-risk behavior unless a future tool passes human review and uses the job/cancel contract where needed.
 3. Move audit logging to SQLite only when queryability is needed.
 4. Add Redis/Celery only after background jobs need process isolation or durable queues.
 5. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, and `tools/manifest.yml` synchronized.
@@ -239,6 +239,10 @@ Current single-request active tools are timeout-bound and run synchronously:
 - `lab_xss_reflection_check`
 - `lab_http_methods_check`
 - `lab_route_exists_check`
+
+Current fixed two-request active tools are also timeout-bound and run synchronously:
+
+- `lab_security_header_delta_check`
 
 Multi-request active tools must not be added unless they use the in-process job registry and cancellation token. Bulk route discovery, crawling, credential checks, exploit validation, and long-running probes must expose job status and support cancellation between network requests and before report writing. Redis/Celery remains a future option only when durable or cross-process background work is justified.
 

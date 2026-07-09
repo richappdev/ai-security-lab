@@ -60,3 +60,13 @@ tools:
     timeout_seconds: 10
     audit_required: true
     description: Send a single-request HEAD check for one known route path on an approved lab target only.
+
+  - name: lab_security_header_delta_check
+    category: active
+    risk: active-low-risk
+    entrypoint: tools/active/security_header_delta_check.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Send a fixed two-request GET check to compare security headers between root and one known route on an approved lab target only.
