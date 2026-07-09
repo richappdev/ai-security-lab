@@ -1,8 +1,8 @@
 # App
 
-Local security app code goes here.
+Local security app code lives here.
 
-The planned MVP is a small local app that:
+The current MVP is a small local app that:
 
 - Loads `targets.allowlist`.
 - Uses the safety layer before tool execution.
@@ -12,12 +12,14 @@ The planned MVP is a small local app that:
 
 ## API
 
-The initial FastAPI app exposes:
+The FastAPI app exposes:
 
 - `GET /health`
 - `POST /scan/passive/headers`
 - `POST /scan/active/xss-reflection`
 - `POST /scan/active/http-methods`
+
+The current active endpoints run one-request, low-risk checks. They are bounded by allowlist validation, policy-backed timeout and rate-limit settings, and audit logging. Add explicit stop/cancel support before introducing multi-request or long-running active scans.
 
 When calling the API from the host, use localhost for the API URL. In the JSON `target`, use `.local` aliases because the API container makes the target request from inside the Docker network. For host-side tools that contact targets directly, use `http://127.0.0.1:3000`, `http://localhost:3000`, `http://127.0.0.1:8080`, or `http://localhost:8080`.
 

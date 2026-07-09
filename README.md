@@ -5,7 +5,7 @@ Local Docker testing environment for security-tool development. This lab is for 
 ## Repository Layout
 
 ```text
-app/       Future local security app code.
+app/       Local FastAPI security app, static UI, and API service wiring.
 agents/    AI agent prompts, planner logic, and agent instructions.
 docs/      Architecture, runbook, contracts, and safety rules.
 lab/       Lab target notes, future compose overlays, and seed data.
@@ -80,7 +80,7 @@ python -m unittest discover -s tests
 
 ## Current Implementation
 
-- `app/api/main.py` exposes the local FastAPI skeleton and passive headers endpoint.
+- `app/api/main.py` exposes the local FastAPI skeleton, static UI, passive headers endpoint, and low-risk active endpoints.
 - `safety/scope_guard.py` enforces exact allowlist matching and local-lab host constraints before tool network access.
 - `safety/audit_log.py` writes append-only JSONL audit records under `logs/`.
 - `tools/passive/headers.py` implements passive response header inspection.
@@ -97,6 +97,7 @@ python -m unittest discover -s tests
 - Keep `.env` bind addresses set to `127.0.0.1`.
 - Do not point scanning, brute force, exploit, DDoS, or lateral-movement modules at public IPs or third-party domains.
 - Add rate limits and timeouts to every active test module.
+- Add explicit cancellation before introducing multi-request or long-running active test modules.
 - Keep audit logs for target, module, start time, end time, and result.
 
 ## Suggested MVP Flow

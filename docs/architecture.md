@@ -1,6 +1,6 @@
 # Architecture
 
-This repository is a local AI-assisted security testing lab. It provides intentionally vulnerable Docker targets and a planned structure for an AI security agent, guarded security tools, safety policy, audit logging, and reports.
+This repository is a local AI-assisted security testing lab. It provides intentionally vulnerable Docker targets, a local FastAPI security app, guarded security tools, safety policy, audit logging, and reports.
 
 ## Core Principle
 
@@ -21,14 +21,19 @@ User request
 
 ## Current Components
 
-- `docker-compose.yml`: local lab targets.
+- `docker-compose.yml`: local lab targets and `security-app`.
+- `app/`: FastAPI API, static UI, and service wiring for guarded tool execution.
 - `targets.allowlist`: approved lab targets.
 - `scripts/`: local lab lifecycle commands.
 - `docs/`: agent-readable operating instructions and contracts.
 - `agents/`: future agent prompts and planning logic.
-- `tools/`: future passive and active security tool implementations.
-- `safety/`: future allowlist, policy, rate-limit, and audit controls.
+- `tools/`: passive inspection and low-risk active security tool implementations.
+- `safety/`: allowlist, policy, rate-limit, and audit controls.
 - `reports/`: generated scan reports and findings.
+
+## Active Execution Boundary
+
+Current active checks are single-request, low-risk modules that are bounded by allowlist validation, policy-backed timeout and rate limits, and audit logging. Explicit stop/cancel support is required before adding multi-request or long-running active modules.
 
 ## Lab Targets
 

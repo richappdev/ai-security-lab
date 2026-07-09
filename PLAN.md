@@ -15,13 +15,15 @@ Build a local, repeatable, and legally safe testing environment for developing a
 - Python safety guard for allowlist and local-lab target checks
 - JSONL audit logging under `logs/`
 - Passive tools: `inspect_headers`, `inspect_cookies`, `discover_forms`
+- Active low-risk tools: `lab_xss_reflection_check`, `lab_http_methods_check`
+- FastAPI `security-app` service at `http://127.0.0.1:8000`
 
 ## Implementation Status
 
 Completed:
 
 - Lab target compose stack and lifecycle scripts.
-- `security-app` FastAPI skeleton with health check and passive headers endpoint.
+- `security-app` FastAPI skeleton with health check, static UI, passive endpoint, and low-risk active endpoints.
 - `targets.allowlist` as the source of truth for approved lab targets.
 - `safety/scope_guard.py` for exact allowlist validation and local-lab host enforcement.
 - `safety/audit_log.py` for append-only JSONL audit records.
@@ -30,13 +32,15 @@ Completed:
 - `tools/passive/forms.py` for passive same-page form discovery without submission.
 - `safety/policy.py` and `safety/rate_limit.py` for policy-backed execution limits.
 - `tools/active/xss_lab_check.py` for a harmless reflected-input lab check.
+- `tools/active/http_methods_check.py` for a one-request HTTP OPTIONS method check.
 - Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
 
 Not started:
 
 - SQLite-backed audit storage.
-- Additional active checks beyond the first reflected-input lab check.
+- Multi-request or long-running active scans.
+- Background job execution and explicit cancellation support.
 
 ## Safety Boundary
 
@@ -44,7 +48,8 @@ Not started:
 - Keep exposed lab ports bound to `127.0.0.1`.
 - Do not scan or attack public IPs, public Taiwan websites, government sites, schools, companies, or unknown third-party assets.
 - Require explicit allowlist checks before any active module runs.
-- Require rate limits, timeouts, cancellation, and audit logs for every active test.
+- Require allowlist checks, rate limits, timeouts, risk labels, and audit logs for every active test.
+- Require explicit cancellation support before adding multi-request or long-running active tests.
 - Require an extra confirmation step before high-risk modules run.
 
 ## MVP Scope
@@ -84,13 +89,13 @@ docker-compose.yml
 |   +-- FastAPI
 |   +-- scanner modules
 |   +-- report generator
-+-- postgres
-+-- redis
 +-- juice-shop
 +-- dvwa
++-- postgres  (future, only when SQLite is insufficient)
++-- redis     (future, only when background jobs are needed)
 ```
 
-The current repository has the lab targets. The `security-app`, `postgres`, and `redis` services can be added once the app implementation begins.
+The current repository has the lab targets and the `security-app` service. PostgreSQL and Redis should be added only when audit/reporting query needs or background jobs justify the extra runtime complexity.
 
 ## Testing Phases
 
@@ -108,6 +113,7 @@ The current repository has the lab targets. The `security-app`, `postgres`, and 
 - Directory and route discovery with strict rate limits.
 - Basic misconfiguration checks.
 - Safe vulnerability probes against lab URLs only.
+- Current one-request checks are timeout-bound; explicit cancellation is required before this phase expands to multi-request scans.
 
 ### Phase 3: Controlled Attack Modules
 
@@ -124,22 +130,22 @@ The current repository has the lab targets. The `security-app`, `postgres`, and 
 
 These must run only in a separate isolated lab profile with stricter limits and explicit confirmation.
 
-## Guardrails To Implement Before Active Testing
+## Guardrails Status Before Expanding Active Testing
 
-- Parse and enforce `targets.allowlist`.
-- Reject public IP ranges and non-allowlisted domains by default.
-- Add per-target and global request rate limits.
-- Add max runtime per task.
-- Add stop/cancel support.
-- Add audit log persistence.
-- Add clear result labeling: `passive`, `active-low-risk`, `active-high-risk`.
+- Done: parse and enforce `targets.allowlist`.
+- Done: reject non-localhost/non-lab-local targets and exact non-allowlisted URLs by default.
+- Done: enforce policy-backed timeout and request-rate limits in current tools.
+- Done: write append-only JSONL audit records.
+- Done: label results as `passive` or `active-low-risk`.
+- Next: define stop/cancel support before adding multi-request or long-running active modules.
+- Later: add SQLite-backed audit storage when queryability is needed.
 
 ## Next Milestones
 
-1. Run human review of `lab_xss_reflection_check` before using it against live lab containers.
-2. Add API/service wiring for the approved active check.
-3. Move audit logging to SQLite when queryability is needed.
-4. Add the next safe DVWA/Juice Shop active check only after review.
+1. Keep `PLAN.md`, `README.md`, `docs/architecture.md`, and `tools/manifest.yml` synchronized as the source of truth for implementation status.
+2. Document the cancellation boundary: current one-request checks are timeout-bound; multi-request tools need explicit stop/cancel support.
+3. Select and review the next safe DVWA/Juice Shop active check before implementation.
+4. Move audit logging to SQLite only when queryability is needed.
 5. Add Redis/Celery only after background jobs are needed.
 
 ## Operating Commands
