@@ -18,8 +18,10 @@ An agent plan should include:
 - `target`: URL to test.
 - `objective`: what the operator wants to learn.
 - `risk_level`: one of `passive`, `active-low-risk`, or `active-high-risk`.
-- `tools`: list of tool names from `tools/manifest.yml`.
+- `tools`: list of tool names from `tools/manifest.yml` (optional `params` such as `route_path` when required).
 - `limits`: timeout and request-rate settings.
+
+Use `agents.planner.build_plan` / `validate_plan` to enforce this contract against the live manifest, then `agents.bridge.execute_plan` to run the plan.
 
 ## Required Checks
 
@@ -39,6 +41,7 @@ The agent must not:
 - Invent target authorization.
 - Test public or third-party systems.
 - Bypass allowlist checks.
+- Call lab targets with raw HTTP clients — only guarded tool entrypoints via `execute_plan` / `service.py`.
 - Run destructive exploit code.
 - Run denial-of-service or stress tests.
 - Perform credential stuffing.

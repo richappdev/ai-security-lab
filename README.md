@@ -6,7 +6,7 @@ Local Docker testing environment for security-tool development. This lab is for 
 
 ```text
 app/       Local FastAPI security app, static UI, and API service wiring.
-agents/    AI agent prompts, planner logic, and agent instructions.
+agents/    AI agent prompts, planner orchestration (manifest/plan/bridge), and instructions.
 docs/      Architecture, runbook, contracts, and safety rules.
 lab/       Lab target notes, future compose overlays, and seed data.
 safety/    Policy and guard code for allowlists, limits, and audit logs.
@@ -24,6 +24,7 @@ For AI-agent operation, start with:
 4. `docs/tool-contract.md`
 5. `tools/manifest.yml`
 6. `safety/policy.yml`
+7. `agents/` (`build_plan` / `execute_plan` — never call lab targets directly)
 
 ## Included Targets
 

@@ -132,3 +132,133 @@ def write_markdown_report(
         "filename": filename,
         "generated_at": generated_at,
     }
+
+
+def _tool_section(tool_result: dict[str, Any], index: int) -> list[str]:
+    if tool_result.get("tool"):
+        tool_name = tool_result["tool"]
+    elif tool_result.get("error"):
+        tool_name = f"failed-step-{index}"
+    else:
+        tool_name = "unknown"
+
+    findings = tool_result.get("findings") or []
+    lines = [
+        f"### {index}. `{tool_name}`",
+        "",
+        f"- Status: `{tool_result.get('status', 'unknown')}`",
+        f"- Risk level: `{tool_result.get('risk', 'n/a')}`",
+        f"- HTTP status: `{tool_result.get('http_status', 'n/a')}`",
+        f"- Started at: `{tool_result.get('started_at', 'unknown')}`",
+        f"- Ended at: `{tool_result.get('ended_at', 'unknown')}`",
+    ]
+    if tool_result.get("error"):
+        lines.append(f"- Error: `{_cell(tool_result.get('error'))}`")
+    lines.extend(
+        [
+            "",
+            "| ID | Severity | Evidence |",
+            "| --- | --- | --- |",
+            *_finding_rows(findings if isinstance(findings, list) else []),
+            "",
+        ]
+    )
+    return lines
+
+
+def render_aggregate_markdown_report(
+    plan_result: dict[str, Any],
+    operator: str,
+    run_id: str,
+    generated_at: str | None = None,
+) -> str:
+    generated = generated_at or utc_now_iso()
+    results = plan_result.get("results") or []
+    tool_names = plan_result.get("tools") or [
+        result.get("tool", "unknown") for result in results if isinstance(result, dict)
+    ]
+
+    lines = [
+        "# Security Lab Aggregate Scan Report",
+        "",
+        "## Summary",
+        "",
+        f"- Plan ID: `{plan_result.get('plan_id', 'n/a')}`",
+        f"- Run ID: `{run_id}`",
+        f"- Operator: `{operator}`",
+        f"- Generated at: `{generated}`",
+        f"- Objective: `{_cell(plan_result.get('objective', 'n/a'))}`",
+        f"- Risk level: `{plan_result.get('risk_level', 'unknown')}`",
+        f"- Status: `{plan_result.get('status', 'unknown')}`",
+        f"- Target: `{plan_result.get('target', 'unknown')}`",
+        f"- Tools: `{', '.join(str(name) for name in tool_names)}`",
+        f"- Started at: `{plan_result.get('started_at', 'unknown')}`",
+        f"- Ended at: `{plan_result.get('ended_at', 'unknown')}`",
+        "",
+        "## Tool Results",
+        "",
+    ]
+
+    if not results:
+        lines.append("No tool results were recorded.")
+        lines.append("")
+    else:
+        for index, result in enumerate(results, start=1):
+            if isinstance(result, dict):
+                lines.extend(_tool_section(result, index))
+            else:
+                lines.append(f"### {index}. unknown")
+                lines.append("")
+                lines.append(f"- Raw result: `{_cell(result)}`")
+                lines.append("")
+
+    lines.extend(
+        [
+            "## Remediation Notes",
+            "",
+            "- Review findings from each tool before treating them as confirmed vulnerabilities.",
+            "- Prefer fixing missing security headers, cookie flags, and form exposure first.",
+            "- Keep follow-up testing limited to explicitly allowlisted lab targets.",
+            "",
+            "## Test Limitations",
+            "",
+            "- This aggregate report combines results from guarded lab tools only.",
+            "- Agents must not call lab targets directly; execution goes through service helpers.",
+            "- Passive and active-low-risk results describe observed behavior and do not prove exploitability.",
+            "- No public, third-party, school, government, or company systems are in scope.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def write_aggregate_markdown_report(
+    plan_result: dict[str, Any],
+    operator: str,
+    run_id: str,
+    repo_root: str | Path | None = None,
+    output_directory: str = DEFAULT_OUTPUT_DIRECTORY,
+) -> dict[str, str]:
+    root = _repo_root(repo_root)
+    output_dir = root / output_directory
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    generated_at = utc_now_iso()
+    filename = f"{_slug(run_id, 'run')}-aggregate.md"
+    report_path = output_dir / filename
+    report_path.write_text(
+        render_aggregate_markdown_report(
+            plan_result,
+            operator=operator,
+            run_id=run_id,
+            generated_at=generated_at,
+        ),
+        encoding="utf-8",
+    )
+
+    return {
+        "format": REPORT_FORMAT,
+        "path": str(report_path),
+        "filename": filename,
+        "generated_at": generated_at,
+    }

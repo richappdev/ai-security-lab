@@ -40,8 +40,9 @@ Completed:
 - Passive API endpoints for headers, cookies, and forms (`POST /scan/passive/headers`, `/cookies`, `/forms`).
 - In-process FastAPI job registry with job status and cancellation endpoints.
 - Markdown report writer for scan results under `reports/`.
-- Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
-- Current verification: `py -m unittest discover -s tests` passes with 85 tests run and 15 skipped.
+- Agent planner orchestration: manifest reader, plan validation, execution bridge via `service.py`, and aggregate multi-tool reports.
+- Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, low-risk active check behavior, and agent plan → execute → audit → report.
+- Current verification: `py -m unittest discover -s tests` passes with 97 tests run and 15 skipped.
 
 Not started:
 
@@ -230,11 +231,16 @@ Acceptance criteria:
 
 ## Next Milestones
 
-1. Use the in-process job registry and cancellation token as the required foundation for any future bulk route checks, crawlers, credential checks, exploit validation, or other long-running probes.
+1. Use the in-process job registry and cancellation token as the required foundation for any future bulk route checks, crawlers, credential checks, exploit validation, or other long-running probes (Phase C).
 2. Keep current active checks limited to fixed-size, active-low-risk behavior unless a future tool passes human review and uses the job/cancel contract where needed.
 3. Move audit logging to SQLite only when queryability is needed.
 4. Add Redis/Celery only after background jobs need process isolation or durable queues.
 5. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, and `tools/manifest.yml` synchronized.
+
+Completed recently:
+
+- Phase A: expose remaining passive tools via API (`/scan/passive/cookies`, `/scan/passive/forms`).
+- Phase B: agent planner integration (manifest reader, plan contract, service execution bridge, aggregate reports).
 
 ## Active Cancellation Boundary
 

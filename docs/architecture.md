@@ -12,11 +12,13 @@ Agents do not perform security actions directly. Agents create plans and request
 User request
   -> agent reads docs/runbook.md
   -> agent checks docs/safety-rules.md
-  -> planner selects tools from tools/manifest.yml
+  -> agents/manifest.py loads tools/manifest.yml
+  -> agents/planner.py validates tool + target + params
+  -> agents/bridge.py calls app/api/service.py helpers
   -> tool validates target with safety/scope_guard.py
   -> tool executes with timeout and rate limits
   -> safety/audit_log.py records the action
-  -> report is written under reports/
+  -> aggregate Markdown report is written under reports/
 ```
 
 ## Current Components
@@ -26,7 +28,7 @@ User request
 - `targets.allowlist`: approved lab targets.
 - `scripts/`: local lab lifecycle commands.
 - `docs/`: agent-readable operating instructions and contracts.
-- `agents/`: future agent prompts and planning logic.
+- `agents/`: prompt templates plus planner orchestration (`manifest.py`, `planner.py`, `bridge.py`).
 - `tools/`: passive inspection and low-risk active security tool implementations.
 - `safety/`: allowlist, policy, rate-limit, and audit controls.
 - `reports/`: generated scan reports and findings.
