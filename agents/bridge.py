@@ -81,6 +81,11 @@ def _invoke_tool(
             route_path=str(planned.params["route_path"]),
             rate_limit_per_minute=rate_limit_per_minute,
         )
+    if planned.name == "lab_bulk_route_exists_check":
+        return service.run_active_bulk_route_exists_scan(
+            **common,
+            rate_limit_per_minute=rate_limit_per_minute,
+        )
 
     raise PlanValidationError(f"no guarded service helper registered for tool: {planned.name}")
 

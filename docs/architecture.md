@@ -35,7 +35,7 @@ User request
 
 ## Active Execution Boundary
 
-Current active checks are fixed-size, low-risk modules that are bounded by allowlist validation, policy-backed timeout and rate limits, and audit logging. Timeout is the effective stop boundary for these synchronous checks. Future multi-request or long-running active modules must run through the in-process job registry and check a cancellation token between network requests.
+Current active checks are fixed-size, low-risk modules that are bounded by allowlist validation, policy-backed timeout and rate limits, and audit logging. Timeout is the effective stop boundary for these synchronous checks. Multi-request or long-running active modules must run through the in-process job registry and check a cancellation token between network requests.
 
 Implemented active-low-risk modules:
 
@@ -44,15 +44,17 @@ Implemented active-low-risk modules:
 - `lab_route_exists_check`: one-request HEAD check for one known route path.
 - `lab_security_header_delta_check`: fixed two-request GET comparison of security headers between root and one known route.
 - `lab_auth_page_metadata_check`: one-request GET-only authentication page metadata check for one known route without credential submission.
+- `lab_bulk_route_exists_check`: cancellable multi-request HEAD checks across a fixed list of known DVWA/Juice Shop paths only (`POST /scan/active/bulk-route-exists`).
 
 ## Job Control
 
-The FastAPI app exposes a minimal in-process job control surface for future cancellable tools:
+The FastAPI app exposes a minimal in-process job control surface:
 
+- `POST /scan/active/bulk-route-exists` starts a cancellable bulk known-route job and returns `job_id`.
 - `GET /jobs/{job_id}` returns status, timestamps, target, tool, operator, and result or error when available.
 - `POST /jobs/{job_id}/cancel` requests cancellation for queued or running work.
 
-Job states are `queued`, `running`, `completed`, `failed`, `cancel_requested`, and `cancelled`. Cancelled jobs write audit records with `status: cancelled`.
+Job states are `queued`, `running`, `completed`, `failed`, `cancel_requested`, and `cancelled`. Cancelled jobs write audit records with `status: cancelled`. The Jobs UI at `/ui/jobs.html` polls status and exposes a cancel button.
 
 ## Lab Targets
 

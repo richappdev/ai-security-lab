@@ -8,7 +8,9 @@ from urllib.request import urlopen
 from uuid import uuid4
 
 from reports.writer import write_markdown_report
+from app.api.jobs import JobRegistry, job_registry
 from tools.active.auth_page_metadata_check import lab_auth_page_metadata_check
+from tools.active.bulk_route_exists_check import lab_bulk_route_exists_check
 from tools.active.http_methods_check import lab_http_methods_check
 from tools.active.route_exists_check import lab_route_exists_check
 from tools.active.security_header_delta_check import lab_security_header_delta_check
@@ -276,3 +278,111 @@ def run_active_auth_page_metadata_scan(
             repo_root=actual_repo_root,
         )
     return result
+
+
+def start_active_bulk_route_exists_scan(
+    target: str,
+    operator: str = DEFAULT_OPERATOR,
+    run_id: str | None = None,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    rate_limit_per_minute: int | None = None,
+    repo_root: str | Path | None = None,
+    opener: Callable[..., Any] = urlopen,
+    generate_report: bool = False,
+    registry: JobRegistry | None = None,
+    start_thread: bool = True,
+) -> dict[str, Any]:
+    """
+    Start a cancellable bulk known-route existence job.
+
+    Returns the job snapshot immediately when start_thread is True (API path).
+    When start_thread is False, runs inline (agent/tests) and still returns the
+    terminal job snapshot.
+    """
+
+    actual_run_id = run_id or new_run_id()
+    actual_repo_root = repo_root or default_repo_root()
+    actual_operator = operator or DEFAULT_OPERATOR
+    active_registry = registry or job_registry
+
+    def runner(token):
+        result = lab_bulk_route_exists_check(
+            target=target,
+            operator=actual_operator,
+            run_id=actual_run_id,
+            timeout_seconds=timeout_seconds,
+            rate_limit_per_minute=rate_limit_per_minute,
+            repo_root=actual_repo_root,
+            opener=opener,
+            cancellation_token=token,
+        )
+        if generate_report and result.get("status") == "completed":
+            result["report"] = write_markdown_report(
+                result,
+                operator=actual_operator,
+                run_id=actual_run_id,
+                repo_root=actual_repo_root,
+            )
+        return result
+
+    record = active_registry.run_job(
+        tool="lab_bulk_route_exists_check",
+        target=target,
+        operator=actual_operator,
+        job_id=actual_run_id if actual_run_id.startswith("job-") else f"job-{actual_run_id}",
+        runner=runner,
+        start_thread=start_thread,
+    )
+    return active_registry.snapshot(record.job_id)
+
+
+def run_active_bulk_route_exists_scan(
+    target: str,
+    operator: str = DEFAULT_OPERATOR,
+    run_id: str | None = None,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    rate_limit_per_minute: int | None = None,
+    repo_root: str | Path | None = None,
+    opener: Callable[..., Any] = urlopen,
+    generate_report: bool = False,
+    registry: JobRegistry | None = None,
+) -> dict[str, Any]:
+    """Run the bulk route check inline and return the tool result (agent path)."""
+
+    snapshot = start_active_bulk_route_exists_scan(
+        target=target,
+        operator=operator,
+        run_id=run_id,
+        timeout_seconds=timeout_seconds,
+        rate_limit_per_minute=rate_limit_per_minute,
+        repo_root=repo_root,
+        opener=opener,
+        generate_report=generate_report,
+        registry=registry,
+        start_thread=False,
+    )
+    if snapshot.get("result") is not None:
+        result = dict(snapshot["result"])
+        result["job_id"] = snapshot.get("job_id")
+        return result
+    return {
+        "tool": "lab_bulk_route_exists_check",
+        "target": target,
+        "risk": "active-low-risk",
+        "status": snapshot.get("status", "failed"),
+        "route_paths": [],
+        "checked": 0,
+        "exists_count": 0,
+        "missing_count": 0,
+        "routes": [],
+        "findings": [
+            {
+                "id": "job_failed",
+                "severity": "error",
+                "evidence": snapshot.get("error") or "bulk route job did not return a result",
+            }
+        ],
+        "started_at": snapshot.get("started_at"),
+        "ended_at": snapshot.get("ended_at"),
+        "job_id": snapshot.get("job_id"),
+    }

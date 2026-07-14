@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bulk Route Job - AI Security Lab</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <strong>AI Security Lab</strong>
+          <span>Local authorized testing workspace</span>
+        </div>
+        <nav class="nav" aria-label="Project pages">
+          <a href="/ui/">Overview</a>
+          <a href="/ui/repo-review.html">Repo Review</a>
+          <a href="/ui/readme.html">README</a>
+          <a href="/ui/testing.html">Testing Results</a>
+          <a href="/ui/jobs.html" aria-current="page">Bulk Route Job</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Cancellable Active Job</p>
+            <h1>Bulk known-route existence</h1>
+            <p class="lede">
+              Starts <code>lab_bulk_route_exists_check</code> against a fixed list of known DVWA/Juice Shop
+              paths. Poll job status and cancel between HEAD requests. Not open crawling.
+            </p>
+          </div>
+          <span class="status-pill">Job registry</span>
+        </div>
+
+        <section class="panel">
+          <h2>Start scan</h2>
+          <form id="bulk-form" class="job-form">
+            <label>
+              Target
+              <select id="target" name="target" required>
+                <option value="http://127.0.0.1:3000">http://127.0.0.1:3000 (Juice Shop host)</option>
+                <option value="http://127.0.0.1:8080">http://127.0.0.1:8080 (DVWA host)</option>
+                <option value="http://juice-shop.local:3000">http://juice-shop.local:3000</option>
+                <option value="http://dvwa.local:8080">http://dvwa.local:8080</option>
+              </select>
+            </label>
+            <label>
+              Operator
+              <input id="operator" name="operator" type="text" value="local-user" required>
+            </label>
+            <label>
+              Rate limit / minute
+              <input id="rate-limit" name="rate_limit_per_minute" type="number" min="1" max="30" value="30">
+            </label>
+            <div class="button-row">
+              <button type="submit" class="btn primary" id="start-btn">Start bulk route job</button>
+              <button type="button" class="btn danger" id="cancel-btn" disabled>Cancel job</button>
+            </div>
+          </form>
+          <p class="muted-note">
+            API: <code>POST /scan/active/bulk-route-exists</code> returns a job, then poll
+            <code>GET /jobs/{job_id}</code> or cancel with <code>POST /jobs/{job_id}/cancel</code>.
+            Documented in the Safety and Scope Register before live lab use. Expected request count equals
+            the fixed known-path list (10 HEAD requests max).
+          </p>
+        </section>
+
+        <section class="panel" style="margin-top: 18px;">
+          <h2>Job status</h2>
+          <div class="grid three">
+            <div class="panel soft metric">
+              <span>Job ID</span>
+              <strong id="job-id">—</strong>
+            </div>
+            <div class="panel soft metric">
+              <span>Status</span>
+              <strong id="job-status">idle</strong>
+            </div>
+            <div class="panel soft metric">
+              <span>Checked</span>
+              <strong id="job-checked">0</strong>
+            </div>
+          </div>
+          <pre class="code" id="job-json" style="margin-top: 16px;">No job started yet.</pre>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        const form = document.getElementById("bulk-form");
+        const startBtn = document.getElementById("start-btn");
+        const cancelBtn = document.getElementById("cancel-btn");
+        const jobIdEl = document.getElementById("job-id");
+        const jobStatusEl = document.getElementById("job-status");
+        const jobCheckedEl = document.getElementById("job-checked");
+        const jobJsonEl = document.getElementById("job-json");
+
+        let activeJobId = null;
+        let pollTimer = null;
+
+        const terminal = new Set(["completed", "failed", "cancelled"]);
+
+        function renderSnapshot(snapshot) {
+          jobIdEl.textContent = snapshot.job_id || "—";
+          jobStatusEl.textContent = snapshot.status || "unknown";
+          const checked = snapshot.result && typeof snapshot.result.checked === "number"
+            ? snapshot.result.checked
+            : 0;
+          jobCheckedEl.textContent = String(checked);
+          jobJsonEl.textContent = JSON.stringify(snapshot, null, 2);
+          const canCancel = snapshot.status === "queued"
+            || snapshot.status === "running"
+            || snapshot.status === "cancel_requested";
+          cancelBtn.disabled = !canCancel;
+          startBtn.disabled = canCancel && !terminal.has(snapshot.status);
+        }
+
+        async function pollJob(jobId) {
+          const response = await fetch("/jobs/" + encodeURIComponent(jobId));
+          if (!response.ok) {
+            throw new Error("Failed to read job: HTTP " + response.status);
+          }
+          const snapshot = await response.json();
+          renderSnapshot(snapshot);
+          if (terminal.has(snapshot.status)) {
+            if (pollTimer) {
+              clearInterval(pollTimer);
+              pollTimer = null;
+            }
+            startBtn.disabled = false;
+            cancelBtn.disabled = true;
+          }
+        }
+
+        form.addEventListener("submit", async function (event) {
+          event.preventDefault();
+          if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+          startBtn.disabled = true;
+          cancelBtn.disabled = true;
+          jobJsonEl.textContent = "Starting job…";
+
+          const payload = {
+            target: document.getElementById("target").value,
+            operator: document.getElementById("operator").value,
+            rate_limit_per_minute: Number(document.getElementById("rate-limit").value) || 30,
+            generate_report: false,
+          };
+
+          try {
+            const response = await fetch("/scan/active/bulk-route-exists", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              throw new Error("Start failed: HTTP " + response.status);
+            }
+            const snapshot = await response.json();
+            activeJobId = snapshot.job_id;
+            renderSnapshot(snapshot);
+            pollTimer = setInterval(function () {
+              pollJob(activeJobId).catch(function (error) {
+                jobJsonEl.textContent = String(error);
+              });
+            }, 500);
+            await pollJob(activeJobId);
+          } catch (error) {
+            startBtn.disabled = false;
+            jobJsonEl.textContent = String(error);
+          }
+        });
+
+        cancelBtn.addEventListener("click", async function () {
+          if (!activeJobId) {
+            return;
+          }
+          cancelBtn.disabled = true;
+          try {
+            const response = await fetch(
+              "/jobs/" + encodeURIComponent(activeJobId) + "/cancel",
+              { method: "POST" }
+            );
+            if (!response.ok) {
+              throw new Error("Cancel failed: HTTP " + response.status);
+            }
+            const snapshot = await response.json();
+            renderSnapshot(snapshot);
+          } catch (error) {
+            jobJsonEl.textContent = String(error);
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

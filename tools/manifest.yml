@@ -80,3 +80,13 @@ tools:
     timeout_seconds: 10
     audit_required: true
     description: Send a single-request GET check to inspect authentication page metadata on one approved lab route without submitting credentials.
+
+  - name: lab_bulk_route_exists_check
+    category: active
+    risk: active-low-risk
+    entrypoint: tools/active/bulk_route_exists_check.py
+    allowed_targets_file: targets.allowlist
+    requires_network: true
+    timeout_seconds: 10
+    audit_required: true
+    description: Send a cancellable multi-request HEAD check across a fixed list of known DVWA/Juice Shop paths only, using the in-process job registry and cancellation token between requests.

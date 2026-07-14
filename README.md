@@ -92,9 +92,11 @@ python -m unittest discover -s tests
 - `tools/active/route_exists_check.py` implements a one-request HEAD route existence check for one known route path on an allowlisted lab target.
 - `tools/active/security_header_delta_check.py` implements a fixed two-request security header comparison between root and one known route on an allowlisted lab target.
 - `tools/active/auth_page_metadata_check.py` implements a one-request GET-only authentication page metadata check for one known route without submitting credentials.
+- `tools/active/bulk_route_exists_check.py` implements a cancellable multi-request HEAD check across a fixed list of known DVWA/Juice Shop paths.
 - `reports/writer.py` generates basic Markdown scan reports under `reports/`.
-- `app/api/jobs.py` provides an in-process job registry and cancellation token for future multi-request tools.
-- `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active checks.
+- `safety/cancellation.py` and `app/api/jobs.py` provide cancellation tokens and an in-process job registry for multi-request tools.
+- `POST /scan/active/bulk-route-exists` returns a `job_id`; poll `/jobs/{job_id}` or cancel via `/jobs/{job_id}/cancel` (UI: `/ui/jobs.html`).
+- `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, low-risk active checks, and cancellable bulk jobs.
 
 ## Safety Boundary
 
@@ -102,7 +104,7 @@ python -m unittest discover -s tests
 - Keep `.env` bind addresses set to `127.0.0.1`.
 - Do not point scanning, brute force, exploit, DDoS, or lateral-movement modules at public IPs or third-party domains.
 - Add rate limits and timeouts to every active test module.
-- Current fixed-size active tools are timeout-bound; future multi-request or long-running active test modules must use the job registry and cancellation token.
+- Current fixed-size active tools are timeout-bound; multi-request active tools (starting with bulk known-route exists) must use the job registry and cancellation token.
 - Keep audit logs for target, module, start time, end time, and result.
 
 ## Suggested MVP Flow

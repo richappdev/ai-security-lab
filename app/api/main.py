@@ -24,6 +24,7 @@ from app.api.service import (
     run_passive_cookie_scan,
     run_passive_form_scan,
     run_passive_header_scan,
+    start_active_bulk_route_exists_scan,
 )
 
 
@@ -96,6 +97,15 @@ class ActiveSecurityHeaderDeltaRequest(BaseModel):
 class ActiveAuthPageMetadataRequest(BaseModel):
     target: str = Field(..., examples=["http://juice-shop.local:3000"])
     route_path: str = Field(..., examples=["/login"], min_length=1)
+    operator: str = Field(DEFAULT_OPERATOR, min_length=1)
+    run_id: str | None = None
+    timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
+    rate_limit_per_minute: int | None = Field(default=None, ge=1, le=30)
+    generate_report: bool = False
+
+
+class ActiveBulkRouteExistsRequest(BaseModel):
+    target: str = Field(..., examples=["http://juice-shop.local:3000"])
     operator: str = Field(DEFAULT_OPERATOR, min_length=1)
     run_id: str | None = None
     timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
@@ -257,4 +267,18 @@ def scan_active_auth_page_metadata(request: ActiveAuthPageMetadataRequest) -> di
         rate_limit_per_minute=request.rate_limit_per_minute,
         repo_root=configured_repo_root(),
         generate_report=request.generate_report,
+    )
+
+
+@app.post("/scan/active/bulk-route-exists", response_model=JobResponse)
+def scan_active_bulk_route_exists(request: ActiveBulkRouteExistsRequest) -> dict[str, Any]:
+    return start_active_bulk_route_exists_scan(
+        target=request.target,
+        operator=request.operator,
+        run_id=request.run_id,
+        timeout_seconds=request.timeout_seconds,
+        rate_limit_per_minute=request.rate_limit_per_minute,
+        repo_root=configured_repo_root(),
+        generate_report=request.generate_report,
+        start_thread=True,
     )

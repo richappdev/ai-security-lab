@@ -21,9 +21,10 @@ Use this runbook when another AI agent or automation system needs to operate thi
 5. Reject any target not listed in the allowlist.
 6. Run passive tools first.
 7. Run single-request, low-risk active tools only against approved lab targets.
-8. Write audit logs for every tool call.
-9. Write reports under `reports/`.
-10. Use the job registry and cancellation token for any future multi-request active tool.
+8. For multi-request checks such as `lab_bulk_route_exists_check`, start the job via `POST /scan/active/bulk-route-exists`, poll `GET /jobs/{job_id}`, and cancel with `POST /jobs/{job_id}/cancel` when needed.
+9. Write audit logs for every tool call.
+10. Write reports under `reports/`.
+11. Do not add credential checks, exploit validation, or high-volume crawling until those tools pass human review and reuse the job/cancel contract.
 
 ## Stop Conditions
 

@@ -12,7 +12,7 @@ Requirements:
 - Audit logging.
 - Lab-only target enforcement.
 
-Current active-low-risk tools are fixed-size checks where timeout is the stop boundary. Multi-request or long-running active tools require explicit stop/cancel support before implementation.
+Current active-low-risk tools are fixed-size checks where timeout is the stop boundary, except `lab_bulk_route_exists_check`, which uses the in-process job registry and cancellation token between HEAD requests.
 
 Implemented active-low-risk tools:
 
@@ -21,5 +21,6 @@ Implemented active-low-risk tools:
 - `lab_route_exists_check`: single-request known-route existence check.
 - `lab_security_header_delta_check`: fixed two-request security header comparison between root and one known route.
 - `lab_auth_page_metadata_check`: single-request GET-only authentication page metadata check without credential submission.
+- `lab_bulk_route_exists_check`: cancellable multi-request HEAD check across a fixed list of known DVWA/Juice Shop paths only (not open crawling).
 
 High-risk tools should not be added until the safety layer is fully implemented and tested.

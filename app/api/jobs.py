@@ -1,13 +1,24 @@
-"""In-process job registry and cancellation primitives."""
+"""In-process job registry for cancellable multi-request tools."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from threading import Event, Lock, Thread
+from threading import Lock, Thread
 from typing import Any, Callable, Literal
 from uuid import uuid4
 
 from safety.audit_log import append_audit_record, utc_now_iso
+from safety.cancellation import CancellationToken, JobCancelledError
+
+# Re-export so existing imports from app.api.jobs keep working.
+__all__ = [
+    "CancellationToken",
+    "JobCancelledError",
+    "JobNotFoundError",
+    "JobRecord",
+    "JobRegistry",
+    "job_registry",
+]
 
 
 JobStatus = Literal["queued", "running", "completed", "failed", "cancel_requested", "cancelled"]
@@ -16,27 +27,6 @@ TerminalStatus = Literal["completed", "failed", "cancelled"]
 
 class JobNotFoundError(KeyError):
     """Raised when a requested job ID is not registered."""
-
-
-class JobCancelledError(RuntimeError):
-    """Raised by cancellable jobs when cancellation should stop execution."""
-
-
-@dataclass
-class CancellationToken:
-    """Cancellation signal passed to future long-running tools."""
-
-    _event: Event = field(default_factory=Event)
-
-    def cancel(self) -> None:
-        self._event.set()
-
-    def is_cancel_requested(self) -> bool:
-        return self._event.is_set()
-
-    def raise_if_cancelled(self) -> None:
-        if self.is_cancel_requested():
-            raise JobCancelledError("job cancellation requested")
 
 
 @dataclass
@@ -144,8 +134,13 @@ class JobRegistry:
             try:
                 record.token.raise_if_cancelled()
                 result = runner(record.token)
-            except JobCancelledError:
-                self._mark_terminal(record.job_id, "cancelled", error="job cancellation requested")
+            except JobCancelledError as exc:
+                self._mark_terminal(
+                    record.job_id,
+                    "cancelled",
+                    result=exc.result,
+                    error=str(exc) or "job cancellation requested",
+                )
             except Exception as exc:  # pragma: no cover - defensive boundary for background jobs
                 self._mark_terminal(record.job_id, "failed", error=str(exc))
             else:

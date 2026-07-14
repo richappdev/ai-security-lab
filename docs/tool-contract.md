@@ -55,7 +55,7 @@ Before a tool sends any network request, it must:
 4. Apply timeout and rate-limit settings.
 5. Create an audit log record.
 
-Current active-low-risk tools must stay fixed-size and timeout-bound. Multi-request or long-running active tools must run through the in-process job registry, check the cancellation token between network requests, and write a cancelled audit record when stopped.
+Current active-low-risk tools must stay fixed-size and timeout-bound, except cancellable multi-request tools such as `lab_bulk_route_exists_check`. Multi-request or long-running active tools must run through the in-process job registry, check the cancellation token between network requests, and write a cancelled audit record when stopped.
 
 ## Risk Levels
 

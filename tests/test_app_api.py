@@ -430,7 +430,7 @@ class FastAPITests(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn("AI Security Lab Dashboard", page.text)
         self.assertIn("route existence", page.text)
-        self.assertIn("8 tools", page.text)
+        self.assertIn("9 tools", page.text)
 
     def test_static_ui_exposes_active_checks(self):
         from fastapi.testclient import TestClient
@@ -440,16 +440,22 @@ class FastAPITests(unittest.TestCase):
         client = TestClient(app)
         review_page = client.get("/ui/repo-review.html")
         testing_page = client.get("/ui/testing.html")
+        jobs_page = client.get("/ui/jobs.html")
 
         self.assertEqual(review_page.status_code, 200)
         self.assertEqual(testing_page.status_code, 200)
+        self.assertEqual(jobs_page.status_code, 200)
         self.assertIn("route existence", review_page.text)
         self.assertIn("security header delta", review_page.text)
         self.assertIn("authentication page metadata", review_page.text)
+        self.assertIn("bulk known-route", review_page.text)
         self.assertIn("Route existence", testing_page.text)
         self.assertIn("Header delta", testing_page.text)
         self.assertIn("Auth metadata", testing_page.text)
-        self.assertIn("eight built-in checks", testing_page.text)
+        self.assertIn("nine built-in checks", testing_page.text)
+        self.assertIn("Cancel job", jobs_page.text)
+        self.assertIn("/scan/active/bulk-route-exists", jobs_page.text)
+        self.assertIn("/jobs/", jobs_page.text)
 
     def test_job_endpoints_read_and_cancel_registered_job(self):
         from fastapi.testclient import TestClient
@@ -810,6 +816,57 @@ class FastAPITests(unittest.TestCase):
 
         self.assertIn("route_path", request_schema["properties"])
         self.assertIn("route_path", request_schema["required"])
+
+    def test_active_bulk_route_exists_endpoint_returns_job(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        with self.make_repo() as repo:
+            with patch("app.api.main.configured_repo_root", return_value=Path(repo)):
+                with patch(
+                    "app.api.main.start_active_bulk_route_exists_scan",
+                    return_value={
+                        "job_id": "job-bulk-api-test",
+                        "tool": "lab_bulk_route_exists_check",
+                        "target": "http://127.0.0.1:3000",
+                        "operator": "api-test",
+                        "status": "queued",
+                        "created_at": "2026-07-14T00:00:00Z",
+                        "started_at": None,
+                        "ended_at": None,
+                    },
+                ):
+                    client = TestClient(app)
+                    response = client.post(
+                        "/scan/active/bulk-route-exists",
+                        json={
+                            "target": "http://127.0.0.1:3000",
+                            "operator": "api-test",
+                            "run_id": "run-api-bulk-test",
+                            "rate_limit_per_minute": 30,
+                            "generate_report": False,
+                        },
+                    )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["job_id"], "job-bulk-api-test")
+        self.assertEqual(payload["tool"], "lab_bulk_route_exists_check")
+        self.assertEqual(payload["status"], "queued")
+
+    def test_active_bulk_route_exists_schema_excludes_open_route_list(self):
+        from fastapi.testclient import TestClient
+
+        from app.api.main import app
+
+        client = TestClient(app)
+        schema = client.get("/openapi.json").json()
+        request_schema = schema["components"]["schemas"]["ActiveBulkRouteExistsRequest"]
+
+        self.assertIn("target", request_schema["required"])
+        self.assertNotIn("route_paths", request_schema.get("properties", {}))
+        self.assertNotIn("route_path", request_schema.get("properties", {}))
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ Build a local, repeatable, and legally safe testing environment for developing a
 - Python safety guard for allowlist and local-lab target checks
 - JSONL audit logging under `logs/`
 - Passive tools: `inspect_headers`, `inspect_cookies`, `discover_forms`
-- Active low-risk tools: `lab_xss_reflection_check`, `lab_http_methods_check`, `lab_route_exists_check`, `lab_security_header_delta_check`, `lab_auth_page_metadata_check`
+- Active low-risk tools: `lab_xss_reflection_check`, `lab_http_methods_check`, `lab_route_exists_check`, `lab_security_header_delta_check`, `lab_auth_page_metadata_check`, `lab_bulk_route_exists_check`
 - FastAPI `security-app` service at `http://127.0.0.1:8000`
 
 ## Implementation Status
@@ -36,18 +36,20 @@ Completed:
 - `tools/active/route_exists_check.py` for a one-request known-route existence check.
 - `tools/active/security_header_delta_check.py` for a fixed two-request security header comparison between root and one known route.
 - `tools/active/auth_page_metadata_check.py` for a one-request GET-only authentication page metadata check without credential submission.
-- Static UI exposure for the route existence, security header delta, and authentication page metadata checks.
+- `tools/active/bulk_route_exists_check.py` for a cancellable multi-request HEAD check across a fixed list of known DVWA/Juice Shop paths (not open crawling).
+- Static UI exposure for the route existence, security header delta, authentication page metadata, and bulk known-route job controls.
 - Passive API endpoints for headers, cookies, and forms (`POST /scan/passive/headers`, `/cookies`, `/forms`).
 - In-process FastAPI job registry with job status and cancellation endpoints.
+- Async job endpoint `POST /scan/active/bulk-route-exists` that returns a `job_id` and checks the cancellation token between requests.
 - Markdown report writer for scan results under `reports/`.
 - Agent planner orchestration: manifest reader, plan validation, execution bridge via `service.py`, and aggregate multi-tool reports.
-- Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, low-risk active check behavior, and agent plan → execute → audit → report.
-- Current verification: `py -m unittest discover -s tests` passes with 97 tests run and 15 skipped.
+- Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, low-risk active check behavior, bulk cancellable job behavior, and agent plan → execute → audit → report.
+- Current verification: `py -m unittest discover -s tests` passes with 108 tests run and 17 skipped.
 
 Not started:
 
 - SQLite-backed audit storage.
-- Multi-request or long-running active scans.
+- Credential checks, exploit validation, or high-volume crawling.
 - Redis/Celery-backed background execution.
 
 ## Safety Boundary
@@ -231,16 +233,16 @@ Acceptance criteria:
 
 ## Next Milestones
 
-1. Use the in-process job registry and cancellation token as the required foundation for any future bulk route checks, crawlers, credential checks, exploit validation, or other long-running probes (Phase C).
-2. Keep current active checks limited to fixed-size, active-low-risk behavior unless a future tool passes human review and uses the job/cancel contract where needed.
-3. Move audit logging to SQLite only when queryability is needed.
-4. Add Redis/Celery only after background jobs need process isolation or durable queues.
-5. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, and `tools/manifest.yml` synchronized.
+1. Keep longer-running or higher-risk active modules deferred until they pass human review and reuse the job/cancel contract where needed.
+2. Move audit logging to SQLite only when queryability is needed.
+3. Add Redis/Celery only after background jobs need process isolation or durable queues.
+4. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, Notion pages, and `tools/manifest.yml` synchronized.
 
 Completed recently:
 
 - Phase A: expose remaining passive tools via API (`/scan/passive/cookies`, `/scan/passive/forms`).
 - Phase B: agent planner integration (manifest reader, plan contract, service execution bridge, aggregate reports).
+- Phase C: first cancellable multi-request scan (`lab_bulk_route_exists_check` via `POST /scan/active/bulk-route-exists`).
 
 ## Active Cancellation Boundary
 
@@ -255,7 +257,11 @@ Current fixed two-request active tools are also timeout-bound and run synchronou
 
 - `lab_security_header_delta_check`
 
-Multi-request active tools must not be added unless they use the in-process job registry and cancellation token. Bulk route discovery, crawling, credential checks, exploit validation, and long-running probes must expose job status and support cancellation between network requests and before report writing. Redis/Celery remains a future option only when durable or cross-process background work is justified.
+Multi-request active tools must not be added unless they use the in-process job registry and cancellation token. The first cancellable multi-request tool is:
+
+- `lab_bulk_route_exists_check`: fixed-list bulk known-route HEAD checks for DVWA/Juice Shop paths only. Started via `POST /scan/active/bulk-route-exists`, polled via `GET /jobs/{job_id}`, and stopped via `POST /jobs/{job_id}/cancel`. The tool checks the cancellation token between network requests.
+
+Bulk route discovery/crawling, credential checks, exploit validation, and other long-running probes remain deferred. Redis/Celery remains a future option only when durable or cross-process background work is justified.
 
 Job control API:
 

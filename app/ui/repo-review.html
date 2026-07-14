@@ -18,6 +18,7 @@
           <a href="/ui/repo-review.html" aria-current="page">Repo Review</a>
           <a href="/ui/readme.html">README</a>
           <a href="/ui/testing.html">Testing Results</a>
+          <a href="/ui/jobs.html">Bulk Route Job</a>
         </nav>
       </aside>
 
@@ -53,6 +54,7 @@
               <li><span class="tag warn">Active low risk</span> One-request route existence check for a known path.</li>
               <li><span class="tag warn">Active low risk</span> Two-request security header delta check for a known route.</li>
               <li><span class="tag warn">Active low risk</span> GET-only authentication page metadata check for a known route.</li>
+              <li><span class="tag warn">Active low risk</span> Cancellable bulk known-route existence check via the job registry.</li>
             </ul>
           </div>
         </section>
@@ -97,9 +99,10 @@
         <section class="panel soft" style="margin-top: 18px;">
           <h2>Review Notes</h2>
           <ul class="list">
-            <li>The current API exposes eight scan endpoints: passive headers, cookies, and forms, plus reflected-input, HTTP methods, route existence, security header delta, and authentication page metadata.</li>
+            <li>The current API exposes nine scan endpoints: passive headers, cookies, and forms, plus reflected-input, HTTP methods, route existence, security header delta, authentication page metadata, and cancellable bulk known-route exists.</li>
             <li>All three passive tools (`inspect_headers`, `inspect_cookies`, `discover_forms`) are wired through `/scan/passive/*` endpoints.</li>
             <li>Route existence, header delta, and authentication page metadata checks are exposed in the static UI as fixed-size, allowlist-bound checks.</li>
+            <li>Bulk known-route existence runs through `POST /scan/active/bulk-route-exists`, returns a `job_id`, and is controlled from `/ui/jobs.html` with poll and cancel.</li>
             <li>Report generation is Markdown-based and suitable for local audit trails.</li>
           </ul>
         </section>

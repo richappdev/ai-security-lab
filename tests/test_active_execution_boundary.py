@@ -9,7 +9,8 @@ class ActiveExecutionBoundaryTests(unittest.TestCase):
         plan = Path("PLAN.md").read_text(encoding="utf-8")
 
         self.assertIn("Current single-request active tools are timeout-bound", plan)
-        self.assertIn("Multi-request active tools must not be added", plan)
+        self.assertIn("Multi-request active tools must not be added unless they use", plan)
+        self.assertIn("lab_bulk_route_exists_check", plan)
 
     def test_active_tool_manifest_descriptions_mark_single_request_tools(self):
         manifest = Path("tools/manifest.yml").read_text(encoding="utf-8")
@@ -32,6 +33,20 @@ class ActiveExecutionBoundaryTests(unittest.TestCase):
         next_tool_start = manifest.find("\n  - name:", tool_section_start + 1)
         tool_section = manifest[tool_section_start:] if next_tool_start == -1 else manifest[tool_section_start:next_tool_start]
         self.assertIn("fixed two-request", tool_section)
+
+    def test_bulk_route_manifest_marks_cancellable_multi_request_tool(self):
+        manifest = Path("tools/manifest.yml").read_text(encoding="utf-8")
+
+        tool_section_start = manifest.index("- name: lab_bulk_route_exists_check")
+        next_tool_start = manifest.find("\n  - name:", tool_section_start + 1)
+        tool_section = (
+            manifest[tool_section_start:]
+            if next_tool_start == -1
+            else manifest[tool_section_start:next_tool_start]
+        )
+        self.assertIn("cancellable multi-request", tool_section)
+        self.assertIn("cancellation token", tool_section)
+        self.assertIn("fixed list of known DVWA/Juice Shop paths", tool_section)
 
 
 if __name__ == "__main__":
