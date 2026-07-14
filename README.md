@@ -80,7 +80,7 @@ python -m unittest discover -s tests
 
 ## Current Implementation
 
-- `app/api/main.py` exposes the local FastAPI skeleton, static UI, passive headers endpoint, and low-risk active endpoints.
+- `app/api/main.py` exposes the local FastAPI skeleton, static UI, passive scan endpoints (headers, cookies, forms), and low-risk active endpoints.
 - `safety/scope_guard.py` enforces exact allowlist matching and local-lab host constraints before tool network access.
 - `safety/audit_log.py` writes append-only JSONL audit records under `logs/`.
 - `tools/passive/headers.py` implements passive response header inspection.

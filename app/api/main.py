@@ -21,6 +21,8 @@ from app.api.service import (
     run_active_route_exists_scan,
     run_active_security_header_delta_scan,
     run_active_xss_reflection_scan,
+    run_passive_cookie_scan,
+    run_passive_form_scan,
     run_passive_header_scan,
 )
 
@@ -30,6 +32,22 @@ def configured_repo_root() -> Path:
 
 
 class HeaderScanRequest(BaseModel):
+    target: str = Field(..., examples=["http://juice-shop.local:3000"])
+    operator: str = Field(DEFAULT_OPERATOR, min_length=1)
+    run_id: str | None = None
+    timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
+    generate_report: bool = False
+
+
+class CookieScanRequest(BaseModel):
+    target: str = Field(..., examples=["http://juice-shop.local:3000"])
+    operator: str = Field(DEFAULT_OPERATOR, min_length=1)
+    run_id: str | None = None
+    timeout_seconds: int = Field(DEFAULT_TIMEOUT_SECONDS, ge=1, le=30)
+    generate_report: bool = False
+
+
+class FormScanRequest(BaseModel):
     target: str = Field(..., examples=["http://juice-shop.local:3000"])
     operator: str = Field(DEFAULT_OPERATOR, min_length=1)
     run_id: str | None = None
@@ -141,6 +159,30 @@ def cancel_job(job_id: str) -> dict[str, Any]:
 @app.post("/scan/passive/headers")
 def scan_passive_headers(request: HeaderScanRequest) -> dict[str, Any]:
     return run_passive_header_scan(
+        target=request.target,
+        operator=request.operator,
+        run_id=request.run_id,
+        timeout_seconds=request.timeout_seconds,
+        repo_root=configured_repo_root(),
+        generate_report=request.generate_report,
+    )
+
+
+@app.post("/scan/passive/cookies")
+def scan_passive_cookies(request: CookieScanRequest) -> dict[str, Any]:
+    return run_passive_cookie_scan(
+        target=request.target,
+        operator=request.operator,
+        run_id=request.run_id,
+        timeout_seconds=request.timeout_seconds,
+        repo_root=configured_repo_root(),
+        generate_report=request.generate_report,
+    )
+
+
+@app.post("/scan/passive/forms")
+def scan_passive_forms(request: FormScanRequest) -> dict[str, Any]:
+    return run_passive_form_scan(
         target=request.target,
         operator=request.operator,
         run_id=request.run_id,

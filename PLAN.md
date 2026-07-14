@@ -23,7 +23,7 @@ Build a local, repeatable, and legally safe testing environment for developing a
 Completed:
 
 - Lab target compose stack and lifecycle scripts.
-- `security-app` FastAPI skeleton with health check, static UI, passive endpoint, and low-risk active endpoints.
+- `security-app` FastAPI skeleton with health check, static UI, passive endpoints (headers, cookies, forms), and low-risk active endpoints.
 - `targets.allowlist` as the source of truth for approved lab targets.
 - `safety/scope_guard.py` for exact allowlist validation and local-lab host enforcement.
 - `safety/audit_log.py` for append-only JSONL audit records.
@@ -37,10 +37,11 @@ Completed:
 - `tools/active/security_header_delta_check.py` for a fixed two-request security header comparison between root and one known route.
 - `tools/active/auth_page_metadata_check.py` for a one-request GET-only authentication page metadata check without credential submission.
 - Static UI exposure for the route existence, security header delta, and authentication page metadata checks.
+- Passive API endpoints for headers, cookies, and forms (`POST /scan/passive/headers`, `/cookies`, `/forms`).
 - In-process FastAPI job registry with job status and cancellation endpoints.
 - Markdown report writer for scan results under `reports/`.
 - Unit tests for scope rejection, audit logging, policy/rate-limit enforcement, passive tool output shape, and low-risk active check behavior.
-- Current verification: `python -m unittest discover -s tests` passes with 79 tests run and 13 skipped.
+- Current verification: `py -m unittest discover -s tests` passes with 85 tests run and 15 skipped.
 
 Not started:
 

@@ -68,6 +68,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\validate-lab.ps1</pre>
 
 Invoke-RestMethod `
   -Method Post `
+  -Uri http://127.0.0.1:8000/scan/passive/cookies `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user"}'
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/scan/passive/forms `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user"}'
+
+Invoke-RestMethod `
+  -Method Post `
   -Uri http://127.0.0.1:8000/scan/active/http-methods `
   -ContentType application/json `
   -Body '{"target":"http://juice-shop.local:3000","operator":"local-user","rate_limit_per_minute":30}'

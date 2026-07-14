@@ -22,7 +22,7 @@ User request
 ## Current Components
 
 - `docker-compose.yml`: local lab targets and `security-app`.
-- `app/`: FastAPI API, static UI, and service wiring for guarded tool execution.
+- `app/`: FastAPI API (including `/scan/passive/headers`, `/scan/passive/cookies`, and `/scan/passive/forms`), static UI, and service wiring for guarded tool execution.
 - `targets.allowlist`: approved lab targets.
 - `scripts/`: local lab lifecycle commands.
 - `docs/`: agent-readable operating instructions and contracts.

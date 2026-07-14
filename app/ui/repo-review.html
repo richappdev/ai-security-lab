@@ -97,8 +97,8 @@
         <section class="panel soft" style="margin-top: 18px;">
           <h2>Review Notes</h2>
           <ul class="list">
-            <li>The current API exposes six scan endpoints: passive headers, reflected-input, HTTP methods, route existence, security header delta, and authentication page metadata.</li>
-            <li>Cookie and form tools exist as modules but are not yet exposed as API endpoints.</li>
+            <li>The current API exposes eight scan endpoints: passive headers, cookies, and forms, plus reflected-input, HTTP methods, route existence, security header delta, and authentication page metadata.</li>
+            <li>All three passive tools (`inspect_headers`, `inspect_cookies`, `discover_forms`) are wired through `/scan/passive/*` endpoints.</li>
             <li>Route existence, header delta, and authentication page metadata checks are exposed in the static UI as fixed-size, allowlist-bound checks.</li>
             <li>Report generation is Markdown-based and suitable for local audit trails.</li>
           </ul>

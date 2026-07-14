@@ -16,6 +16,8 @@ The FastAPI app exposes:
 
 - `GET /health`
 - `POST /scan/passive/headers`
+- `POST /scan/passive/cookies`
+- `POST /scan/passive/forms`
 - `POST /scan/active/xss-reflection`
 - `POST /scan/active/http-methods`
 - `POST /scan/active/route-exists`
@@ -34,6 +36,26 @@ Passive header example:
 Invoke-RestMethod `
   -Method Post `
   -Uri http://127.0.0.1:8000/scan/passive/headers `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user"}'
+```
+
+Passive cookie example:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/scan/passive/cookies `
+  -ContentType application/json `
+  -Body '{"target":"http://juice-shop.local:3000","operator":"local-user"}'
+```
+
+Passive form discovery example:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/scan/passive/forms `
   -ContentType application/json `
   -Body '{"target":"http://juice-shop.local:3000","operator":"local-user"}'
 ```
