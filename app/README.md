@@ -101,9 +101,12 @@ Invoke-RestMethod `
   -Body '{"target":"http://juice-shop.local:3000","route_path":"/login","operator":"local-user","rate_limit_per_minute":30}'
 ```
 
-Active bulk known-route exists example (async job):
+Active bulk known-route exists example (async job). Rebuild `security-app` first if OpenAPI is missing `/scan/active/bulk-route-exists`:
 
 ```powershell
+docker compose build security-app
+docker compose up -d security-app
+
 $job = Invoke-RestMethod `
   -Method Post `
   -Uri http://127.0.0.1:8000/scan/active/bulk-route-exists `

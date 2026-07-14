@@ -21,10 +21,11 @@ Use this runbook when another AI agent or automation system needs to operate thi
 5. Reject any target not listed in the allowlist.
 6. Run passive tools first.
 7. Run single-request, low-risk active tools only against approved lab targets.
-8. For multi-request checks such as `lab_bulk_route_exists_check`, start the job via `POST /scan/active/bulk-route-exists`, poll `GET /jobs/{job_id}`, and cancel with `POST /jobs/{job_id}/cancel` when needed.
-9. Write audit logs for every tool call.
+8. For multi-request checks such as `lab_bulk_route_exists_check`, start the job via `POST /scan/active/bulk-route-exists`, poll `GET /jobs/{job_id}`, and cancel with `POST /jobs/{job_id}/cancel` when needed. Rebuild `security-app` (`docker compose build security-app && docker compose up -d security-app`) before live smoke if OpenAPI is missing newer routes.
+9. Write audit logs for every tool call (inside the container at `/workspace/logs/audit.jsonl` when running via Compose).
 10. Write reports under `reports/`.
 11. Do not add credential checks, exploit validation, or high-volume crawling until those tools pass human review and reuse the job/cancel contract.
+12. Record live smoke results in the Notion Security Testing Log (allowlist checks, job IDs, audit refs, false-positive notes).
 
 ## Stop Conditions
 

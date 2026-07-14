@@ -234,15 +234,17 @@ Acceptance criteria:
 ## Next Milestones
 
 1. Keep longer-running or higher-risk active modules deferred until they pass human review and reuse the job/cancel contract where needed.
-2. Move audit logging to SQLite only when queryability is needed.
-3. Add Redis/Celery only after background jobs need process isolation or durable queues.
-4. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, Notion pages, and `tools/manifest.yml` synchronized.
+2. Optional: live smoke remaining passive cookies/forms APIs when useful; record in the Security Testing Log.
+3. Move audit logging to SQLite only when queryability is needed.
+4. Add Redis/Celery only after background jobs need process isolation or durable queues.
+5. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, Notion pages, and `tools/manifest.yml` synchronized.
 
 Completed recently:
 
 - Phase A: expose remaining passive tools via API (`/scan/passive/cookies`, `/scan/passive/forms`).
 - Phase B: agent planner integration (manifest reader, plan contract, service execution bridge, aggregate reports).
 - Phase C: first cancellable multi-request scan (`lab_bulk_route_exists_check` via `POST /scan/active/bulk-route-exists`).
+- Live lab smoke (2026-07-14): bulk known-route exists against Juice Shop + DVWA (complete + cancel); logged in Notion Security Testing Log. Rebuild `security-app` before live API smoke if the container image is stale.
 
 ## Active Cancellation Boundary
 
