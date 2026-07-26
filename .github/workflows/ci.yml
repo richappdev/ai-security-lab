@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Compose file
+        run: docker compose config
+
+      - name: Build security-app image
+        run: docker compose build security-app
+
+      - name: Smoke test image
+        run: |
+          set -euo pipefail
+          docker compose run -d --no-deps --name security-app-ci --service-ports \
+            -e DATABASE_URL=sqlite+pysqlite:////tmp/ci.db \
+            -e ALLOW_DEV_AUTH=true \
+            -e EVIDENCE_SIGNING_KEY=ci-smoke-key \
+            security-app
+          for i in $(seq 1 30); do
+            body="$(curl -fsS http://127.0.0.1:8000/health || true)"
+            if echo "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+              echo "Health check passed: $body"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Health check timed out"
+          docker logs security-app-ci || true
+          exit 1
+
+      - name: Stop smoke container
+        if: always()
+        run: |
+          docker rm -f security-app-ci || true
+          docker compose down --remove-orphans || true

@@ -79,6 +79,33 @@ powershell -ExecutionPolicy Bypass -File .\scripts\validate-lab.ps1
 python -m unittest discover -s tests
 ```
 
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on pushes and pull requests to `main`/`master`:
+
+- **test** — Python 3.12, `pip install -r requirements.txt`, then `python -m unittest discover -s tests -v`
+- **docker** — `docker compose config`, `docker compose build security-app`, then a standalone container smoke that polls `GET /health` until `"status":"ok"`
+
+Local equivalents:
+
+```powershell
+python -m unittest discover -s tests -v
+docker compose config
+docker compose build security-app
+```
+
+After a local build, smoke the image without the full lab stack:
+
+```powershell
+docker compose run -d --no-deps --name security-app-ci --service-ports `
+  -e DATABASE_URL=sqlite+pysqlite:////tmp/ci.db `
+  -e ALLOW_DEV_AUTH=true `
+  -e EVIDENCE_SIGNING_KEY=ci-smoke-key `
+  security-app
+curl http://127.0.0.1:8000/health
+docker rm -f security-app-ci
+```
+
 ## Current Implementation
 
 **MVP status:** Complete as of 2026-07-26. The guarded local lab, agent planner,
