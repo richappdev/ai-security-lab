@@ -20,6 +20,11 @@ Build a local, repeatable, and legally safe testing environment for developing a
 
 ## Implementation Status
 
+MVP status: Complete as of 2026-07-26. Live API smoke now covers the passive
+cookies/forms endpoints and the cancellable bulk-route completion/cancel paths.
+The existing HTTP tools are a stable target-adapter pack rather than an
+open-ended scanner backlog.
+
 Completed:
 
 - Lab target compose stack and lifecycle scripts.
@@ -233,11 +238,12 @@ Acceptance criteria:
 
 ## Next Milestones
 
-1. Keep longer-running or higher-risk active modules deferred until they pass human review and reuse the job/cancel contract where needed.
-2. Optional: live smoke remaining passive cookies/forms APIs when useful; record in the Security Testing Log.
-3. Move audit logging to SQLite only when queryability is needed.
-4. Add Redis/Celery only after background jobs need process isolation or durable queues.
-5. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, Notion pages, and `tools/manifest.yml` synchronized.
+1. Start Product Core definition for AI application/platform teams building agents; treat enterprise security teams as the secondary buyer/reviewer.
+2. Define the product domain model, threat model, normalized agent/tool event schema, and deterministic scenario contract.
+3. Design tenant-aware persistence, authorization, policy enforcement, and durable evidence without weakening the current tool-level safety boundary.
+4. Add no new HTTP scanner endpoint unless a concrete reviewed agent-security scenario requires it as a target adapter.
+5. Introduce durable workers, Redis, PostgreSQL, or other expanded runtime components only when the selected product workflow requires them.
+6. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, Notion pages, and `tools/manifest.yml` synchronized.
 
 Completed recently:
 
@@ -245,6 +251,7 @@ Completed recently:
 - Phase B: agent planner integration (manifest reader, plan contract, service execution bridge, aggregate reports).
 - Phase C: first cancellable multi-request scan (`lab_bulk_route_exists_check` via `POST /scan/active/bulk-route-exists`).
 - Live lab smoke (2026-07-14): bulk known-route exists against Juice Shop + DVWA (complete + cancel); logged in Notion Security Testing Log. Rebuild `security-app` before live API smoke if the container image is stale.
+- Close-and-pivot smoke (2026-07-26): passive cookies/forms APIs completed against Juice Shop + DVWA with four completed runs and eight matching audit records; local MVP declared complete.
 
 ## Active Cancellation Boundary
 

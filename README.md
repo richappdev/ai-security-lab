@@ -81,6 +81,10 @@ python -m unittest discover -s tests
 
 ## Current Implementation
 
+**MVP status:** Complete as of 2026-07-26. The guarded local lab, agent planner,
+passive and bounded active checks, cancellation path, audit trail, reports, unit
+suite, and live smoke coverage are verified.
+
 - `app/api/main.py` exposes the local FastAPI skeleton, static UI, passive scan endpoints (headers, cookies, forms), and low-risk active endpoints.
 - `safety/scope_guard.py` enforces exact allowlist matching and local-lab host constraints before tool network access.
 - `safety/audit_log.py` writes append-only JSONL audit records under `logs/`.
@@ -97,6 +101,12 @@ python -m unittest discover -s tests
 - `safety/cancellation.py` and `app/api/jobs.py` provide cancellation tokens and an in-process job registry for multi-request tools.
 - `POST /scan/active/bulk-route-exists` returns a `job_id`; poll `/jobs/{job_id}` or cancel via `/jobs/{job_id}/cancel` (UI: `/ui/jobs.html`).
 - `tests/` covers scope checks, audit logging, policy/rate-limit enforcement, passive tool output shape, low-risk active checks, and cancellable bulk jobs.
+
+The existing HTTP checks are now a stable target-adapter pack. Do not add another
+HTTP scanner endpoint unless a concrete, reviewed agent-security scenario requires
+it. Product development should focus next on deterministic agent-security
+scenarios, agent/tool identity and permissions, tenant isolation, policy
+enforcement, and durable evidence.
 
 ## Safety Boundary
 
