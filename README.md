@@ -104,9 +104,26 @@ suite, and live smoke coverage are verified.
 
 The existing HTTP checks are now a stable target-adapter pack. Do not add another
 HTTP scanner endpoint unless a concrete, reviewed agent-security scenario requires
-it. Product development should focus next on deterministic agent-security
-scenarios, agent/tool identity and permissions, tenant isolation, policy
-enforcement, and durable evidence.
+it.
+
+## Product Core (Agent Security Validation)
+
+Control-plane modules for tenant-aware agent evaluation:
+
+- `docs/product/` — glossary, threat model, scenario/event/evidence contracts
+- `domain/`, `persistence/` — SQLAlchemy models, Alembic, RBAC repositories, Postgres RLS hooks
+- `scenarios/packs/` — eight deterministic scenarios (confused-deputy, injection, exfil, approval, cancel, MCP poisoning, cost ceiling)
+- `agents/adapters/synthetic.py` — vendor-neutral synthetic agent under test
+- `evidence/` — sealed manifests + local/MinIO blob store
+- `POST /v1/...` — organizations, projects, agents, runs, suite-runs
+- Compose: `postgres` always; Keycloak via `--profile oidc`; MinIO via `--profile beta`
+- Local auth for lab/tests: `X-User-Sub` header (OIDC JWT when `OIDC_ISSUER` is set)
+
+```powershell
+pip install -r requirements.txt
+$env:DATABASE_URL = "sqlite+pysqlite:///./tmp/dev.db"   # or use Compose postgres
+python -m unittest discover -s tests
+```
 
 ## Safety Boundary
 

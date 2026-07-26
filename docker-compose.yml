@@ -1,6 +1,60 @@
 name: ai-security-lab
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aisec}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aisec}
+      POSTGRES_DB: ${POSTGRES_DB:-aisec}
+    ports:
+      - "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - lab_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aisec} -d ${POSTGRES_DB:-aisec}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: lab-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--http-port=8081"]
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_PORT: 8081
+    ports:
+      - "${KEYCLOAK_BIND:-127.0.0.1}:${KEYCLOAK_PORT:-8081}:8081"
+    networks:
+      - lab_net
+    profiles:
+      - oidc
+
+  minio:
+    image: minio/minio:latest
+    container_name: lab-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "${MINIO_BIND:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_BIND:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - lab_net
+    profiles:
+      - beta
+
   security-app:
     build:
       context: .
@@ -9,13 +63,26 @@ services:
     restart: unless-stopped
     environment:
       APP_REPO_ROOT: /workspace
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://aisec:aisec@postgres:5432/aisec}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:-}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-evidence}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      EVIDENCE_LOCAL_ROOT: /workspace/tmp/evidence
     ports:
       - "${SECURITY_APP_BIND:-127.0.0.1}:${SECURITY_APP_PORT:-8000}:8000"
     networks:
       - lab_net
     depends_on:
-      - juice-shop
-      - dvwa
+      postgres:
+        condition: service_healthy
+      juice-shop:
+        condition: service_started
+      dvwa:
+        condition: service_started
 
   juice-shop:
     image: bkimminich/juice-shop:latest
@@ -43,3 +110,7 @@ networks:
   lab_net:
     name: ai-security-lab-net
     driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:

@@ -26,6 +26,8 @@ from app.api.service import (
     run_passive_header_scan,
     start_active_bulk_route_exists_scan,
 )
+from app.api.sse import router as sse_router
+from app.api.v1 import router as v1_router
 
 
 def configured_repo_root() -> Path:
@@ -133,9 +135,12 @@ class JobResponse(BaseModel):
 
 app = FastAPI(
     title="AI Security Lab API",
-    version="0.1.0",
-    description="Local-only API for guarded security lab tools.",
+    version="0.2.0",
+    description="Guarded security lab tools plus AI agent security validation control plane.",
 )
+
+app.include_router(v1_router)
+app.include_router(sse_router)
 
 app.mount("/ui", StaticFiles(directory=configured_repo_root() / "app" / "ui", html=True), name="ui")
 

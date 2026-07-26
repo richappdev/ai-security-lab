@@ -10,3 +10,6 @@ reports/*
 !reports/.gitkeep
 !reports/*.py
 tmp/
+*.egg-info/
+.venv/
+venv/

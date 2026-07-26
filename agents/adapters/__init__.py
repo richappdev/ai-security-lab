@@ -1,0 +1,1 @@
+"""Synthetic / framework agent adapters."""

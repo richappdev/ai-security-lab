@@ -56,6 +56,19 @@ The FastAPI app exposes a minimal in-process job control surface:
 
 Job states are `queued`, `running`, `completed`, `failed`, `cancel_requested`, and `cancelled`. Cancelled jobs write audit records with `status: cancelled`. The Jobs UI at `/ui/jobs.html` polls status and exposes a cancel button.
 
+## Product control plane
+
+In addition to lab scan adapters, the app exposes `/v1` for AI agent security validation:
+
+- Tenant graph and runs persist via SQLAlchemy (`persistence/`) with `organization_id` isolation.
+- Deterministic scenarios live under `scenarios/packs/` and execute through `scenarios/runner.py`.
+- Synthetic agents under test: `agents/adapters/synthetic.py` (never call lab targets directly for product scenarios).
+- Evidence manifests: `evidence/`; optional MinIO via Compose profile `beta`.
+- Private Beta foundations: `workers/temporal_stub.py`, `app/api/sse.py`, `integrations/ci_gates.py`, `observability/otel.py`.
+- Enterprise stubs: `enterprise/`.
+
+See `docs/product/README.md`.
+
 ## Lab Targets
 
 - OWASP Juice Shop at `http://127.0.0.1:3000`

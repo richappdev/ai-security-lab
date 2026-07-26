@@ -238,12 +238,16 @@ Acceptance criteria:
 
 ## Next Milestones
 
-1. Start Product Core definition for AI application/platform teams building agents; treat enterprise security teams as the secondary buyer/reviewer.
-2. Define the product domain model, threat model, normalized agent/tool event schema, and deterministic scenario contract.
-3. Design tenant-aware persistence, authorization, policy enforcement, and durable evidence without weakening the current tool-level safety boundary.
-4. Add no new HTTP scanner endpoint unless a concrete reviewed agent-security scenario requires it as a target adapter.
-5. Introduce durable workers, Redis, PostgreSQL, or other expanded runtime components only when the selected product workflow requires them.
-6. Continue keeping `PLAN.md`, README files, architecture docs, UI pages, Notion pages, and `tools/manifest.yml` synchronized.
+Product Core track (AI Agent Security Validation Platform):
+
+1. WP0–WP1: domain glossary, acceptance criteria, threat model, event/scenario/evidence contracts under `docs/product/`.
+2. WP2: PostgreSQL + Alembic tenant model, OIDC/RBAC/RLS, denial-path isolation tests.
+3. WP3: synthetic agent + confused-deputy vertical slice (events → finding → evidence; fail/remediate/pass).
+4. WP4: ≥5 deterministic scenarios and two-org isolation exit gate.
+5. Private Beta: Temporal workers, MinIO evidence blobs, suites/CI gates, SSE timeline, OpenTelemetry.
+6. Enterprise: SAML/SCIM, private workers, integrations, metering, assurance.
+7. Add no new HTTP scanner endpoint unless a concrete reviewed agent-security scenario requires it as a target adapter.
+8. Keep `PLAN.md`, README files, architecture docs, UI pages, Notion pages, and `tools/manifest.yml` synchronized.
 
 Completed recently:
 
@@ -252,6 +256,7 @@ Completed recently:
 - Phase C: first cancellable multi-request scan (`lab_bulk_route_exists_check` via `POST /scan/active/bulk-route-exists`).
 - Live lab smoke (2026-07-14): bulk known-route exists against Juice Shop + DVWA (complete + cancel); logged in Notion Security Testing Log. Rebuild `security-app` before live API smoke if the container image is stale.
 - Close-and-pivot smoke (2026-07-26): passive cookies/forms APIs completed against Juice Shop + DVWA with four completed runs and eight matching audit records; local MVP declared complete.
+- Product Core (2026-07-26): domain/persistence/`/v1`, eight deterministic scenarios, synthetic agent, evidence manifests, two-org isolation tests; Private Beta + Enterprise foundation modules. Verification: 119 tests run, 17 skipped, OK.
 
 ## Active Cancellation Boundary
 
