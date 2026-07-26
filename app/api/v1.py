@@ -8,8 +8,18 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth import AuthContext, get_auth_context, get_db
-from domain import OrgRole
+from app.auth import AuthContext, auth_config, get_auth_context, get_db
+from domain import FindingStatus, OrgRole
+from evidence import build_export_bundle, verify_signature
+from evidence.store import EvidenceStore
+from integrations.ci_gates import (
+    build_check_run_payload,
+    build_gitlab_status_payload,
+    publish_github_check_run,
+    publish_gitlab_commit_status,
+    should_fail_release,
+)
+from persistence import RunEvent
 from persistence.repositories import (
     AuthorizationError,
     add_membership,
@@ -20,11 +30,15 @@ from persistence.repositories import (
     get_evidence_for_run,
     get_run,
     list_findings_for_run,
+    list_project_findings,
     require_role,
     resolve_principal,
+    update_finding_status,
 )
 from scenarios import list_scenario_keys
 from scenarios.runner import execute_evaluation, execute_suite
+from sqlalchemy import select
+from workers.durable import get_durable_engine
 
 router = APIRouter(prefix="/v1", tags=["product-v1"])
 
@@ -60,6 +74,7 @@ class CreateRunRequest(BaseModel):
     behave_securely: bool = True
     idempotency_key: str | None = None
     store_blob: bool = True
+    durable: bool | None = None
 
 
 class CreateSuiteRunRequest(BaseModel):
@@ -67,6 +82,30 @@ class CreateSuiteRunRequest(BaseModel):
     agent_id: str
     scenario_keys: list[str]
     behave_securely: bool = True
+    durable: bool | None = None
+
+
+class UpdateFindingRequest(BaseModel):
+    status: str
+    assignee: str | None = None
+    note: str | None = None
+
+
+class ReleaseGateRequest(BaseModel):
+    suite_name: str = "core"
+    project_id: str
+    agent_id: str
+    scenario_keys: list[str]
+    behave_securely: bool = True
+    head_sha: str | None = None
+    provider: str = Field("github", pattern="^(github|gitlab|none)$")
+    max_failed: int = 0
+    publish: bool = True
+
+
+@router.get("/auth/config")
+def api_auth_config() -> dict[str, Any]:
+    return auth_config()
 
 
 def _principal(db: Session, auth: AuthContext, organization_id: str):
@@ -190,6 +229,7 @@ def api_create_run(
             behave_securely=body.behave_securely,
             idempotency_key=key,
             store_blob=body.store_blob,
+            durable=body.durable,
         )
     except AuthorizationError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
@@ -214,9 +254,61 @@ def api_suite_run(
             agent_id=body.agent_id,
             scenario_keys=body.scenario_keys,
             behave_securely=body.behave_securely,
+            durable=body.durable,
         )
     except AuthorizationError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+@router.post("/organizations/{organization_id}/release-gates")
+def api_release_gate(
+    organization_id: str,
+    body: ReleaseGateRequest,
+    auth: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    principal = _principal(db, auth, organization_id)
+    try:
+        suite = execute_suite(
+            db,
+            principal,
+            project_id=body.project_id,
+            agent_id=body.agent_id,
+            scenario_keys=body.scenario_keys,
+            behave_securely=body.behave_securely,
+        )
+    except AuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    fail_release = should_fail_release(
+        suite["suite_gate_result"],
+        max_failed=body.max_failed,
+        failed_count=suite["failed_count"],
+    )
+    check_payload = build_check_run_payload(
+        suite_name=body.suite_name,
+        gate_result=suite["suite_gate_result"],
+        failed_count=suite["failed_count"],
+        run_ids=suite.get("run_ids") or [],
+        evidence_uris=suite.get("evidence_uris") or [],
+        head_sha=body.head_sha,
+    )
+    publish_result: dict[str, Any] = {"published": False, "skipped": True}
+    if body.publish and body.provider == "github":
+        publish_result = publish_github_check_run(check_payload)
+    elif body.publish and body.provider == "gitlab":
+        gl_payload = build_gitlab_status_payload(
+            suite_name=body.suite_name,
+            gate_result=suite["suite_gate_result"],
+        )
+        publish_result = publish_gitlab_commit_status(gl_payload, sha=body.head_sha)
+
+    return {
+        **suite,
+        "fail_release": fail_release,
+        "check_run": check_payload,
+        "publish_result": publish_result,
+    }
 
 
 @router.get("/organizations/{organization_id}/runs/{run_id}")
@@ -231,6 +323,16 @@ def api_get_run(
         run = get_run(db, principal, run_id)
         findings = list_findings_for_run(db, principal, run_id)
         evidence = get_evidence_for_run(db, principal, run_id)
+        events = list(
+            db.scalars(
+                select(RunEvent)
+                .where(
+                    RunEvent.run_id == run_id,
+                    RunEvent.organization_id == organization_id,
+                )
+                .order_by(RunEvent.seq)
+            )
+        )
     except AuthorizationError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     return {
@@ -239,6 +341,7 @@ def api_get_run(
         "gate_result": run.gate_result,
         "scenario_key": run.scenario_key,
         "scenario_version": run.scenario_version,
+        "events": [{"seq": e.seq, "type": e.event_type, "payload": e.payload} for e in events],
         "findings": [
             {
                 "id": f.id,
@@ -246,6 +349,7 @@ def api_get_run(
                 "title": f.title,
                 "severity": f.severity,
                 "status": f.status,
+                "detail": f.detail,
             }
             for f in findings
         ],
@@ -258,5 +362,134 @@ def api_get_run(
             "content_sha256": evidence.content_sha256,
             "object_uri": evidence.object_uri,
             "manifest": evidence.manifest,
+            "signature_valid": verify_signature(
+                {**evidence.manifest, "signature": None} if evidence.manifest else {},
+                (evidence.manifest or {}).get("signature"),
+            )
+            if evidence.manifest
+            else False,
         },
     }
+
+
+@router.get("/organizations/{organization_id}/runs/{run_id}/export")
+def api_export_evidence(
+    organization_id: str,
+    run_id: str,
+    auth: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    principal = _principal(db, auth, organization_id)
+    try:
+        run = get_run(db, principal, run_id)
+        evidence = get_evidence_for_run(db, principal, run_id)
+        findings = list_findings_for_run(db, principal, run_id)
+        events = [
+            e.payload
+            for e in db.scalars(
+                select(RunEvent)
+                .where(
+                    RunEvent.run_id == run_id,
+                    RunEvent.organization_id == organization_id,
+                )
+                .order_by(RunEvent.seq)
+            )
+        ]
+    except AuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    if evidence is None:
+        raise HTTPException(status_code=404, detail="evidence not found")
+    finding_payloads = [
+        {
+            "assertion_id": f.assertion_id,
+            "title": f.title,
+            "severity": f.severity,
+            "detail": f.detail,
+        }
+        for f in findings
+    ]
+    bundle = build_export_bundle(
+        manifest=evidence.manifest or {},
+        events=events,
+        findings=finding_payloads,
+        gate_result=run.gate_result or "fail",
+        scenario_key=run.scenario_key,
+        run_id=run.id,
+    )
+    # Persist refreshed export bundle
+    uri = EvidenceStore().put_json(
+        organization_id=run.organization_id,
+        project_id=run.project_id,
+        run_id=run.id,
+        name="evidence-bundle.json",
+        payload=bundle,
+    )
+    return {"bundle": bundle, "object_uri": uri, "signature": bundle.get("signature")}
+
+
+@router.get("/organizations/{organization_id}/projects/{project_id}/findings")
+def api_list_findings(
+    organization_id: str,
+    project_id: str,
+    status: str | None = None,
+    auth: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    principal = _principal(db, auth, organization_id)
+    try:
+        rows = list_project_findings(db, principal, project_id, status=status)
+    except AuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return {
+        "findings": [
+            {
+                "id": f.id,
+                "run_id": f.run_id,
+                "assertion_id": f.assertion_id,
+                "title": f.title,
+                "severity": f.severity,
+                "status": f.status,
+                "detail": f.detail,
+            }
+            for f in rows
+        ]
+    }
+
+
+@router.patch("/organizations/{organization_id}/findings/{finding_id}")
+def api_update_finding(
+    organization_id: str,
+    finding_id: str,
+    body: UpdateFindingRequest,
+    auth: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    principal = _principal(db, auth, organization_id)
+    if body.status not in {s.value for s in FindingStatus}:
+        raise HTTPException(status_code=400, detail="invalid status")
+    try:
+        finding = update_finding_status(
+            db,
+            principal,
+            finding_id,
+            status=body.status,
+            assignee=body.assignee,
+            note=body.note,
+        )
+    except AuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "id": finding.id,
+        "status": finding.status,
+        "detail": finding.detail,
+    }
+
+
+@router.get("/workflows/{workflow_id}")
+def api_describe_workflow(workflow_id: str) -> dict[str, Any]:
+    try:
+        return get_durable_engine().describe(workflow_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="workflow not found") from exc

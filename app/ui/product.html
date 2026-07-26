@@ -5,36 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Product Control Plane</title>
   <link rel="stylesheet" href="/ui/styles.css" />
+  <style>
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    pre { max-height: 320px; overflow: auto; background: #111; color: #ddd; padding: 0.75rem; }
+    .timeline { font-family: ui-monospace, monospace; font-size: 0.85rem; }
+    .finding { border-left: 3px solid #c45; padding-left: 0.5rem; margin: 0.5rem 0; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
   <main class="page">
     <h1>Agent Security Validation</h1>
-    <p>Register an org/project/agent and run deterministic scenarios via <code>/v1</code>.</p>
+    <p>Private Beta: durable suite runs, signed evidence export, findings triage, SSE timeline.</p>
     <nav>
       <a href="/ui/">Overview</a> |
       <a href="/ui/jobs.html">Jobs</a> |
-      <a href="/docs/product/">Product docs</a>
+      <a href="/docs">OpenAPI</a>
     </nav>
+
     <section>
       <label>User sub <input id="user" value="alice" /></label>
+      <label>Bearer token (OIDC) <input id="token" placeholder="optional JWT" style="width: 40%" /></label>
       <label>Org name <input id="orgName" value="DemoOrg" /></label>
       <button id="bootstrap">Bootstrap org + project + agent</button>
       <button id="runSuite">Run core suite</button>
-      <pre id="out"></pre>
+      <button id="releaseGate">Release gate (dry-run)</button>
+      <button id="exportLast">Export evidence bundle</button>
+    </section>
+
+    <section class="split">
+      <div>
+        <h2>Output</h2>
+        <pre id="out"></pre>
+      </div>
+      <div>
+        <h2>Run timeline (SSE)</h2>
+        <div id="timeline" class="timeline">Run a suite, then stream opens automatically.</div>
+        <h2>Findings</h2>
+        <div id="findings"></div>
+      </div>
     </section>
   </main>
   <script>
     const out = document.getElementById("out");
-    const headers = () => ({
-      "Content-Type": "application/json",
-      "X-User-Sub": document.getElementById("user").value,
-    });
+    const findingsEl = document.getElementById("findings");
+    const timelineEl = document.getElementById("timeline");
     let state = {};
+    let es = null;
+
+    const headers = () => {
+      const h = { "Content-Type": "application/json" };
+      const token = document.getElementById("token").value.trim();
+      if (token) h["Authorization"] = `Bearer ${token}`;
+      else h["X-User-Sub"] = document.getElementById("user").value;
+      return h;
+    };
+
+    const show = (data) => { out.textContent = JSON.stringify(data, null, 2); };
+
+    async function loadFindings() {
+      if (!state.org || !state.project) return;
+      const data = await fetch(
+        `/v1/organizations/${state.org.id}/projects/${state.project.id}/findings`,
+        { headers: headers() }
+      ).then((r) => r.json());
+      findingsEl.innerHTML = "";
+      for (const f of data.findings || []) {
+        const div = document.createElement("div");
+        div.className = "finding";
+        div.innerHTML = `<strong>${f.title}</strong> [${f.status}]
+          <div>
+            <button data-id="${f.id}" data-status="assigned">Assign</button>
+            <button data-id="${f.id}" data-status="suppressed">Suppress</button>
+            <button data-id="${f.id}" data-status="accepted">Accept</button>
+            <button data-id="${f.id}" data-status="remediated">Remediate</button>
+            <button data-id="${f.id}" data-status="verified">Verify</button>
+          </div>`;
+        findingsEl.appendChild(div);
+      }
+      findingsEl.querySelectorAll("button").forEach((btn) => {
+        btn.onclick = async () => {
+          const res = await fetch(
+            `/v1/organizations/${state.org.id}/findings/${btn.dataset.id}`,
+            {
+              method: "PATCH",
+              headers: headers(),
+              body: JSON.stringify({
+                status: btn.dataset.status,
+                assignee: document.getElementById("user").value,
+              }),
+            }
+          ).then((r) => r.json());
+          show(res);
+          loadFindings();
+        };
+      });
+    }
+
+    function streamRun(runId) {
+      if (es) es.close();
+      timelineEl.textContent = "Connecting…";
+      const user = encodeURIComponent(document.getElementById("user").value);
+      // EventSource cannot set custom headers; use query for lab/dev stream auth via cookie-less path.
+      // For lab UX we poll get-run events when SSE headers are unavailable.
+      fetch(`/v1/organizations/${state.org.id}/runs/${runId}`, { headers: headers() })
+        .then((r) => r.json())
+        .then((run) => {
+          const lines = (run.events || []).map(
+            (e) => `#${e.seq} ${e.type} ${JSON.stringify(e.payload)}`
+          );
+          timelineEl.textContent = lines.join("\\n") || "No events";
+        });
+    }
+
     document.getElementById("bootstrap").onclick = async () => {
       const org = await fetch("/v1/organizations", {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({ name: document.getElementById("orgName").value }),
+        body: JSON.stringify({ name: document.getElementById("orgName").value + "-" + Date.now() }),
       }).then((r) => r.json());
       const project = await fetch(`/v1/organizations/${org.id}/projects`, {
         method: "POST",
@@ -53,32 +141,72 @@
         }
       ).then((r) => r.json());
       state = { org, project, agent };
-      out.textContent = JSON.stringify(state, null, 2);
+      show(state);
     };
+
+    const coreKeys = [
+      "unauthorized_tool_invocation",
+      "direct_prompt_injection",
+      "indirect_prompt_injection",
+      "sensitive_data_exfiltration",
+      "approval_bypass",
+    ];
+
     document.getElementById("runSuite").onclick = async () => {
-      if (!state.org) {
-        out.textContent = "Bootstrap first";
-        return;
-      }
-      const keys = [
-        "unauthorized_tool_invocation",
-        "direct_prompt_injection",
-        "indirect_prompt_injection",
-        "sensitive_data_exfiltration",
-        "approval_bypass",
-      ];
+      if (!state.org) return show("Bootstrap first");
       const result = await fetch(`/v1/organizations/${state.org.id}/suite-runs`, {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({
           project_id: state.project.id,
           agent_id: state.agent.id,
-          scenario_keys: keys,
+          scenario_keys: coreKeys,
           behave_securely: true,
         }),
       }).then((r) => r.json());
-      out.textContent = JSON.stringify(result, null, 2);
+      state.lastSuite = result;
+      show(result);
+      if (result.run_ids && result.run_ids[0]) streamRun(result.run_ids[0]);
+      loadFindings();
     };
+
+    document.getElementById("releaseGate").onclick = async () => {
+      if (!state.org) return show("Bootstrap first");
+      const result = await fetch(`/v1/organizations/${state.org.id}/release-gates`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({
+          suite_name: "core",
+          project_id: state.project.id,
+          agent_id: state.agent.id,
+          scenario_keys: coreKeys,
+          behave_securely: true,
+          provider: "github",
+          publish: true,
+          head_sha: null,
+        }),
+      }).then((r) => r.json());
+      state.lastSuite = result;
+      show(result);
+      loadFindings();
+    };
+
+    document.getElementById("exportLast").onclick = async () => {
+      const runId = state.lastSuite?.run_ids?.[0];
+      if (!runId) return show("Run a suite first");
+      const result = await fetch(
+        `/v1/organizations/${state.org.id}/runs/${runId}/export`,
+        { headers: headers() }
+      ).then((r) => r.json());
+      show(result);
+    };
+
+    fetch("/v1/auth/config").then((r) => r.json()).then((c) => {
+      if (c.oidc_enabled) {
+        timelineEl.textContent =
+          `OIDC enabled (${c.issuer}). Paste a Bearer token above for partner auth.`;
+      }
+    });
   </script>
 </body>
 </html>

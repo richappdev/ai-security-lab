@@ -25,13 +25,15 @@ services:
     image: quay.io/keycloak/keycloak:26.0
     container_name: lab-keycloak
     restart: unless-stopped
-    command: ["start-dev", "--http-port=8081"]
+    command: ["start-dev", "--http-port=8081", "--import-realm"]
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HTTP_PORT: 8081
     ports:
       - "${KEYCLOAK_BIND:-127.0.0.1}:${KEYCLOAK_PORT:-8081}:8081"
+    volumes:
+      - ./deploy/keycloak/aisec-realm.json:/opt/keycloak/data/import/aisec-realm.json:ro
     networks:
       - lab_net
     profiles:
@@ -54,6 +56,53 @@ services:
       - lab_net
     profiles:
       - beta
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: lab-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin};
+      mc mb --ignore-existing local/$${MINIO_BUCKET:-evidence};
+      exit 0;
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-evidence}
+    networks:
+      - lab_net
+    profiles:
+      - beta
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    container_name: lab-temporal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-aisec}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-aisec}
+      POSTGRES_SEEDS: postgres
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+    ports:
+      - "${TEMPORAL_BIND:-127.0.0.1}:${TEMPORAL_PORT:-7233}:7233"
+    networks:
+      - lab_net
+    profiles:
+      - beta
 
   security-app:
     build:
@@ -67,11 +116,19 @@ services:
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
       OIDC_JWKS_URL: ${OIDC_JWKS_URL:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-aisec-ui}
+      ALLOW_DEV_AUTH: ${ALLOW_DEV_AUTH:-true}
+      USE_DURABLE_RUNS: ${USE_DURABLE_RUNS:-true}
+      TEMPORAL_HOST: ${TEMPORAL_HOST:-}
+      EVIDENCE_SIGNING_KEY: ${EVIDENCE_SIGNING_KEY:-local-dev-evidence-key}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
       MINIO_BUCKET: ${MINIO_BUCKET:-evidence}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       EVIDENCE_LOCAL_ROOT: /workspace/tmp/evidence
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_OWNER: ${GITHUB_OWNER:-}
+      GITHUB_REPO: ${GITHUB_REPO:-}
     ports:
       - "${SECURITY_APP_BIND:-127.0.0.1}:${SECURITY_APP_PORT:-8000}:8000"
     networks:

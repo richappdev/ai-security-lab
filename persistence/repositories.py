@@ -300,6 +300,74 @@ def get_evidence_for_run(session: Session, principal: Principal, run_id: str) ->
     )
 
 
+def get_finding(session: Session, principal: Principal, finding_id: str) -> Finding:
+    finding = session.get(Finding, finding_id)
+    if finding is None or finding.organization_id != principal.organization_id:
+        audit_authz(
+            session,
+            principal=principal,
+            action="finding.read",
+            resource_type="finding",
+            resource_id=finding_id,
+            allowed=False,
+        )
+        raise AuthorizationError("finding not found in organization")
+    return finding
+
+
+def update_finding_status(
+    session: Session,
+    principal: Principal,
+    finding_id: str,
+    *,
+    status: str,
+    assignee: str | None = None,
+    note: str | None = None,
+) -> Finding:
+    from domain import FindingStatus
+
+    allowed = {s.value for s in FindingStatus}
+    if status not in allowed:
+        raise ValueError(f"invalid finding status: {status}")
+    require_role(principal, write=True)
+    finding = get_finding(session, principal, finding_id)
+    finding.status = status
+    detail = dict(finding.detail or {})
+    if assignee is not None:
+        detail["assignee"] = assignee
+    if note is not None:
+        detail["note"] = note
+    detail["updated_by"] = principal.user_sub
+    finding.detail = detail
+    audit_authz(
+        session,
+        principal=principal,
+        action="finding.update",
+        resource_type="finding",
+        resource_id=finding.id,
+        allowed=True,
+        detail={"status": status},
+    )
+    return finding
+
+
+def list_project_findings(
+    session: Session,
+    principal: Principal,
+    project_id: str,
+    *,
+    status: str | None = None,
+) -> list[Finding]:
+    get_project(session, principal, project_id)
+    stmt = select(Finding).where(
+        Finding.project_id == project_id,
+        Finding.organization_id == principal.organization_id,
+    )
+    if status:
+        stmt = stmt.where(Finding.status == status)
+    return list(session.scalars(stmt))
+
+
 def persist_run_result(
     session: Session,
     *,

@@ -1,0 +1,72 @@
+{
+  "realm": "aisec",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "owner", "description": "Organization owner" },
+      { "name": "operator", "description": "Can run evaluations" },
+      { "name": "viewer", "description": "Read-only" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "aisec-api",
+      "name": "AI Security Lab API",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "aisec-api-secret",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://127.0.0.1:8000/*", "http://localhost:8000/*"],
+      "webOrigins": ["http://127.0.0.1:8000", "http://localhost:8000"],
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600"
+      }
+    },
+    {
+      "clientId": "aisec-ui",
+      "name": "AI Security Lab UI",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://127.0.0.1:8000/*", "http://localhost:8000/*"],
+      "webOrigins": ["*"],
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@example.com",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Owner",
+      "credentials": [
+        { "type": "password", "value": "alice-pass", "temporary": false }
+      ],
+      "realmRoles": ["owner", "operator"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@example.com",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Operator",
+      "credentials": [
+        { "type": "password", "value": "bob-pass", "temporary": false }
+      ],
+      "realmRoles": ["operator"]
+    }
+  ]
+}
