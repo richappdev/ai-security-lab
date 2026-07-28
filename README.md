@@ -154,6 +154,12 @@ python -m unittest discover -s tests
 
 ## Safety Boundary
 
+Private Beta now includes immutable revisions, Temporal-compatible event-driven runs,
+run-scoped capabilities, PostgreSQL RLS, Ed25519-capable evidence, retention,
+persisted regression comparisons, expiring exceptions, and encrypted CI installations.
+See [`docs/product/private-beta-operations.md`](docs/product/private-beta-operations.md)
+for deployment, backup/restore, key rotation, incident response, and rollout gates.
+
 - Test only the targets in `targets.allowlist`.
 - Keep `.env` bind addresses set to `127.0.0.1`.
 - Do not point scanning, brute force, exploit, DDoS, or lateral-movement modules at public IPs or third-party domains.

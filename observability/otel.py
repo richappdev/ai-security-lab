@@ -22,6 +22,13 @@ def configure_telemetry(service_name: str = "ai-security-lab") -> dict[str, Any]
         provider = TracerProvider(resource=resource)
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
         trace.set_tracer_provider(provider)
+        try:
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+            # Instrumentation binds to the app from its own bootstrap when available.
+            FastAPIInstrumentor.instrument()
+        except ImportError:
+            pass
         return {"enabled": True, "service_name": service_name, "endpoint": endpoint}
     except ImportError:
         return {"enabled": False, "service_name": service_name, "reason": "opentelemetry not installed"}

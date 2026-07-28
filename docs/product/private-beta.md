@@ -1,11 +1,15 @@
 # Private Beta engineering notes
 
-Implemented foundations:
+Implemented beta control plane:
 
-- **OIDC:** [`deploy/keycloak/aisec-realm.json`](../../deploy/keycloak/aisec-realm.json) imported via `docker compose --profile oidc up`. Set `OIDC_ISSUER` / `OIDC_AUDIENCE`. Lab `X-User-Sub` requires `ALLOW_DEV_AUTH=true` (disable for partner demos).
-- **Durable runs:** [`workers/durable.py`](../../workers/durable.py) — capability documents, heartbeats, cancel/recover; suite/run APIs use this when `USE_DURABLE_RUNS=true`. Optional Temporal server: `--profile beta` (`TEMPORAL_HOST`).
-- **Evidence:** HMAC-signed manifests + SARIF/JSON export bundles via `/v1/.../runs/{id}/export`. MinIO via `--profile beta` + `MINIO_ENDPOINT`.
-- **CI gates:** `POST /v1/.../release-gates` builds GitHub check-run / GitLab status payloads and publishes when tokens are set (otherwise dry-run).
-- **Findings UX:** list/patch findings; product UI at `/ui/product.html` with triage + timeline.
+- **OIDC:** standards-compliant discovery/JWKS validation; local Keycloak remains available. Development header authentication is rejected by the beta startup profile.
+- **Durable runs:** Temporal Cloud workflow definitions, event-driven evaluation runs, ordered/idempotent batches, cancellation, deadlines, and a local compatibility engine guarded by `ALLOW_LEGACY_SYNC_RUNS`.
+- **Isolation:** Alembic-managed PostgreSQL RLS with `USING` and `WITH CHECK`, run-scoped capabilities, and a disposable non-root Docker launcher with default-deny egress.
+- **Evidence:** recursive redaction, Ed25519 signing with key IDs, SHA-256 metadata, 30-day expiry, auditable purge, and JSON/SARIF/HTML/PDF export.
+- **Product workflow:** immutable agent/suite/policy revisions, persisted suite runs, regression comparison, structured finding transitions, and expiring exceptions.
+- **CI gates:** encrypted organization-scoped GitHub/GitLab installations; global tokens are local-compatibility only.
+- **Operations:** correlation IDs, OpenTelemetry bootstrap, request metrics, beta configuration checks, and documented deployment/recovery procedures.
 
-Exit gate: design partner fails build → remediate → rerun → pass → export signed evidence bundle.
+Exit gate: a design partner fails a build, inspects evidence, remediates, reruns the identical suite revision, passes, and exports an independently verifiable bundle.
+
+See [Private Beta Operations](private-beta-operations.md).

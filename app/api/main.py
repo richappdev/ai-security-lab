@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -28,6 +28,12 @@ from app.api.service import (
 )
 from app.api.sse import router as sse_router
 from app.api.v1 import router as v1_router
+from observability.otel import configure_telemetry
+from observability.runtime import (
+    metrics_snapshot,
+    request_observability_middleware,
+    validate_beta_configuration,
+)
 
 
 def configured_repo_root() -> Path:
@@ -138,6 +144,9 @@ app = FastAPI(
     version="0.2.0",
     description="Guarded security lab tools plus AI agent security validation control plane.",
 )
+validate_beta_configuration()
+configure_telemetry("ai-security-control-plane")
+app.middleware("http")(request_observability_middleware)
 
 app.include_router(v1_router)
 app.include_router(sse_router)
@@ -153,6 +162,16 @@ def dashboard() -> RedirectResponse:
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(status="ok", service="security-app")
+
+
+@app.get("/v1/operations/metrics")
+def operations_metrics(
+    x_operations_token: str | None = Header(default=None, alias="X-Operations-Token"),
+) -> dict[str, Any]:
+    expected = os.environ.get("OPERATIONS_TOKEN")
+    if expected and x_operations_token != expected:
+        raise HTTPException(status_code=401, detail="invalid operations token")
+    return metrics_snapshot()
 
 
 @app.get("/jobs/{job_id}", response_model=JobResponse)

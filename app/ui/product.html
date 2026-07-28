@@ -3,210 +3,189 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Product Control Plane</title>
+  <title>Agent Security Private Beta</title>
   <link rel="stylesheet" href="/ui/styles.css" />
   <style>
-    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    pre { max-height: 320px; overflow: auto; background: #111; color: #ddd; padding: 0.75rem; }
-    .timeline { font-family: ui-monospace, monospace; font-size: 0.85rem; }
-    .finding { border-left: 3px solid #c45; padding-left: 0.5rem; margin: 0.5rem 0; }
-    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:.5rem; align-items:end; }
+    .card { border:1px solid #d8d8d8; border-radius:8px; padding:1rem; }
+    .timeline,.mono { font-family:ui-monospace,monospace; white-space:pre-wrap; font-size:.84rem; }
+    .finding { border-left:4px solid #b33; padding:.65rem; margin:.5rem 0; background:#fff8f8; }
+    .pass { color:#18794e; } .fail { color:#b42318; }
+    pre { max-height:420px; overflow:auto; background:#111; color:#ddd; padding:.75rem; }
+    input { min-width:12rem; }
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <main class="page">
-    <h1>Agent Security Validation</h1>
-    <p>Private Beta: durable suite runs, signed evidence export, findings triage, SSE timeline.</p>
-    <nav>
-      <a href="/ui/">Overview</a> |
-      <a href="/ui/jobs.html">Jobs</a> |
-      <a href="/docs">OpenAPI</a>
-    </nav>
+<main class="page">
+  <h1>Agent Security Validation</h1>
+  <p>Private Beta control plane: immutable versions, persisted suites, policy gates, evidence, regression comparison, and finding workflow.</p>
+  <nav><a href="/ui/">Overview</a> | <a href="/ui/jobs.html">Lab jobs</a> | <a href="/docs">API</a></nav>
 
-    <section>
-      <label>User sub <input id="user" value="alice" /></label>
-      <label>Bearer token (OIDC) <input id="token" placeholder="optional JWT" style="width: 40%" /></label>
-      <label>Org name <input id="orgName" value="DemoOrg" /></label>
-      <button id="bootstrap">Bootstrap org + project + agent</button>
-      <button id="runSuite">Run core suite</button>
-      <button id="releaseGate">Release gate (dry-run)</button>
-      <button id="exportLast">Export evidence bundle</button>
-    </section>
+  <section class="card">
+    <h2>Identity and inventory</h2>
+    <div class="toolbar">
+      <label>User subject<br><input id="user" value="alice" /></label>
+      <label>OIDC bearer token<br><input id="token" placeholder="partner JWT" /></label>
+      <label>Organization<br><input id="orgName" value="PrivateBeta" /></label>
+      <button id="bootstrap">Create organization, project, agent, suite, and policy</button>
+    </div>
+    <div id="inventory" class="mono">No inventory loaded.</div>
+  </section>
 
-    <section class="split">
-      <div>
-        <h2>Output</h2>
-        <pre id="out"></pre>
+  <section class="grid">
+    <div class="card">
+      <h2>Evaluation suite</h2>
+      <div class="toolbar">
+        <button id="runPass">Run secure agent</button>
+        <button id="runFail">Run insecure agent</button>
+        <button id="releaseGate">Evaluate release policy</button>
       </div>
-      <div>
-        <h2>Run timeline (SSE)</h2>
-        <div id="timeline" class="timeline">Run a suite, then stream opens automatically.</div>
-        <h2>Findings</h2>
-        <div id="findings"></div>
-      </div>
-    </section>
-  </main>
-  <script>
-    const out = document.getElementById("out");
-    const findingsEl = document.getElementById("findings");
-    const timelineEl = document.getElementById("timeline");
-    let state = {};
-    let es = null;
+      <h3>Regression comparison</h3>
+      <div id="comparison" class="mono">Run an immutable suite revision.</div>
+    </div>
+    <div class="card">
+      <h2>Run timeline</h2>
+      <div id="timeline" class="timeline">No run selected.</div>
+      <button id="refreshRun">Refresh selected run</button>
+    </div>
+  </section>
 
-    const headers = () => {
-      const h = { "Content-Type": "application/json" };
-      const token = document.getElementById("token").value.trim();
-      if (token) h["Authorization"] = `Bearer ${token}`;
-      else h["X-User-Sub"] = document.getElementById("user").value;
-      return h;
-    };
+  <section class="grid">
+    <div class="card">
+      <h2>Findings</h2>
+      <div id="findings">No findings.</div>
+    </div>
+    <div class="card">
+      <h2>Evidence and export verification</h2>
+      <button id="exportRun">Export selected run</button>
+      <div id="evidence" class="mono">No evidence selected.</div>
+    </div>
+  </section>
 
-    const show = (data) => { out.textContent = JSON.stringify(data, null, 2); };
-
-    async function loadFindings() {
-      if (!state.org || !state.project) return;
-      const data = await fetch(
-        `/v1/organizations/${state.org.id}/projects/${state.project.id}/findings`,
-        { headers: headers() }
-      ).then((r) => r.json());
-      findingsEl.innerHTML = "";
-      for (const f of data.findings || []) {
-        const div = document.createElement("div");
-        div.className = "finding";
-        div.innerHTML = `<strong>${f.title}</strong> [${f.status}]
-          <div>
-            <button data-id="${f.id}" data-status="assigned">Assign</button>
-            <button data-id="${f.id}" data-status="suppressed">Suppress</button>
-            <button data-id="${f.id}" data-status="accepted">Accept</button>
-            <button data-id="${f.id}" data-status="remediated">Remediate</button>
-            <button data-id="${f.id}" data-status="verified">Verify</button>
-          </div>`;
-        findingsEl.appendChild(div);
-      }
-      findingsEl.querySelectorAll("button").forEach((btn) => {
-        btn.onclick = async () => {
-          const res = await fetch(
-            `/v1/organizations/${state.org.id}/findings/${btn.dataset.id}`,
-            {
-              method: "PATCH",
-              headers: headers(),
-              body: JSON.stringify({
-                status: btn.dataset.status,
-                assignee: document.getElementById("user").value,
-              }),
-            }
-          ).then((r) => r.json());
-          show(res);
-          loadFindings();
-        };
-      });
-    }
-
-    function streamRun(runId) {
-      if (es) es.close();
-      timelineEl.textContent = "Connecting…";
-      const user = encodeURIComponent(document.getElementById("user").value);
-      // EventSource cannot set custom headers; use query for lab/dev stream auth via cookie-less path.
-      // For lab UX we poll get-run events when SSE headers are unavailable.
-      fetch(`/v1/organizations/${state.org.id}/runs/${runId}`, { headers: headers() })
-        .then((r) => r.json())
-        .then((run) => {
-          const lines = (run.events || []).map(
-            (e) => `#${e.seq} ${e.type} ${JSON.stringify(e.payload)}`
-          );
-          timelineEl.textContent = lines.join("\\n") || "No events";
-        });
-    }
-
-    document.getElementById("bootstrap").onclick = async () => {
-      const org = await fetch("/v1/organizations", {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({ name: document.getElementById("orgName").value + "-" + Date.now() }),
-      }).then((r) => r.json());
-      const project = await fetch(`/v1/organizations/${org.id}/projects`, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({ name: "default" }),
-      }).then((r) => r.json());
-      const agent = await fetch(
-        `/v1/organizations/${org.id}/projects/${project.id}/agents`,
-        {
-          method: "POST",
-          headers: headers(),
-          body: JSON.stringify({
-            name: "synthetic",
-            allowed_tools: ["read_public_doc"],
-          }),
-        }
-      ).then((r) => r.json());
-      state = { org, project, agent };
-      show(state);
-    };
-
-    const coreKeys = [
-      "unauthorized_tool_invocation",
-      "direct_prompt_injection",
-      "indirect_prompt_injection",
-      "sensitive_data_exfiltration",
-      "approval_bypass",
-    ];
-
-    document.getElementById("runSuite").onclick = async () => {
-      if (!state.org) return show("Bootstrap first");
-      const result = await fetch(`/v1/organizations/${state.org.id}/suite-runs`, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({
-          project_id: state.project.id,
-          agent_id: state.agent.id,
-          scenario_keys: coreKeys,
-          behave_securely: true,
-        }),
-      }).then((r) => r.json());
-      state.lastSuite = result;
-      show(result);
-      if (result.run_ids && result.run_ids[0]) streamRun(result.run_ids[0]);
-      loadFindings();
-    };
-
-    document.getElementById("releaseGate").onclick = async () => {
-      if (!state.org) return show("Bootstrap first");
-      const result = await fetch(`/v1/organizations/${state.org.id}/release-gates`, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({
-          suite_name: "core",
-          project_id: state.project.id,
-          agent_id: state.agent.id,
-          scenario_keys: coreKeys,
-          behave_securely: true,
-          provider: "github",
-          publish: true,
-          head_sha: null,
-        }),
-      }).then((r) => r.json());
-      state.lastSuite = result;
-      show(result);
-      loadFindings();
-    };
-
-    document.getElementById("exportLast").onclick = async () => {
-      const runId = state.lastSuite?.run_ids?.[0];
-      if (!runId) return show("Run a suite first");
-      const result = await fetch(
-        `/v1/organizations/${state.org.id}/runs/${runId}/export`,
-        { headers: headers() }
-      ).then((r) => r.json());
-      show(result);
-    };
-
-    fetch("/v1/auth/config").then((r) => r.json()).then((c) => {
-      if (c.oidc_enabled) {
-        timelineEl.textContent =
-          `OIDC enabled (${c.issuer}). Paste a Bearer token above for partner auth.`;
-      }
+  <section class="card">
+    <h2>API output</h2>
+    <pre id="out"></pre>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const state = {};
+const coreScenarios = [
+  "unauthorized_tool_invocation", "direct_prompt_injection",
+  "indirect_prompt_injection", "sensitive_data_exfiltration",
+  "approval_bypass", "cancel_scope_respect", "mcp_tool_poisoning",
+  "resource_exhaustion"
+];
+const headers = () => {
+  const value = {"Content-Type":"application/json"};
+  const token = $("token").value.trim();
+  if (token) value.Authorization = `Bearer ${token}`;
+  else value["X-User-Sub"] = $("user").value.trim();
+  return value;
+};
+async function api(url, options={}) {
+  const response = await fetch(url, {headers:headers(), ...options});
+  const body = await response.json();
+  if (!response.ok) throw new Error(`${response.status}: ${JSON.stringify(body)}`);
+  return body;
+}
+const show = (value) => $("out").textContent = JSON.stringify(value,null,2);
+function inventory() {
+  $("inventory").textContent = state.org
+    ? `org=${state.org.id}\nproject=${state.project.id}\nagent=${state.agent.id}\nagent_version=${state.agent.agent_version_id}\nsuite=${state.suite.id}\nsuite_revision=${state.suite.suite_revision_id}\npolicy_revision=${state.policy.policy_revision_id}`
+    : "No inventory loaded.";
+}
+$("bootstrap").onclick = async () => {
+  try {
+    state.org = await api("/v1/organizations", {method:"POST",body:JSON.stringify({name:`${$("orgName").value}-${Date.now()}`})});
+    state.project = await api(`/v1/organizations/${state.org.id}/projects`, {method:"POST",body:JSON.stringify({name:"default"})});
+    state.agent = await api(`/v1/organizations/${state.org.id}/projects/${state.project.id}/agents`, {
+      method:"POST", body:JSON.stringify({name:"candidate-agent",version:"1.0.0",allowed_tools:["read_public_doc"]})
     });
-  </script>
+    state.suite = await api(`/v1/organizations/${state.org.id}/projects/${state.project.id}/suites`, {
+      method:"POST", body:JSON.stringify({name:"private-beta-core",scenario_keys:coreScenarios})
+    });
+    state.policy = await api(`/v1/organizations/${state.org.id}/projects/${state.project.id}/policies`, {
+      method:"POST", body:JSON.stringify({name:"default-release-policy",rules:{
+        max_failed:0, required_scenarios:coreScenarios,
+        block_severities:["critical","high"], require_complete_evidence:true
+      }})
+    });
+    inventory(); show(state);
+  } catch(error) { show({error:String(error)}); }
+};
+async function runSuite(secure) {
+  if (!state.org) return show({error:"Create inventory first"});
+  try {
+    const result = await api(`/v1/organizations/${state.org.id}/suite-runs`, {
+      method:"POST", body:JSON.stringify({
+        suite_revision_id:state.suite.suite_revision_id,
+        agent_version_id:state.agent.agent_version_id,
+        policy_revision_id:state.policy.policy_revision_id,
+        behave_securely:secure
+      })
+    });
+    state.suiteRun=result; state.runId=result.run_ids[0];
+    $("comparison").textContent=JSON.stringify({score:result.score,gate:result.suite_gate_result,...result.comparison},null,2);
+    await refreshRun(); await loadFindings(); show(result);
+  } catch(error) { show({error:String(error)}); }
+}
+$("runPass").onclick=()=>runSuite(true);
+$("runFail").onclick=()=>runSuite(false);
+async function refreshRun() {
+  if (!state.runId) return;
+  const run=await api(`/v1/organizations/${state.org.id}/runs/${state.runId}`);
+  const lines=(run.events||[]).map(e=>`#${e.seq} ${e.type} ${JSON.stringify(e.payload)}`);
+  $("timeline").textContent=`status=${run.status} gate=${run.gate_result} workflow=${run.workflow_id||"local"}\n${lines.join("\n")}`;
+  $("evidence").textContent=run.evidence
+    ? `sha256=${run.evidence.content_sha256}\nsigning=${run.evidence.signing_algorithm}:${run.evidence.signing_key_id}\nsignature_valid=${run.evidence.signature_valid}\nexpires=${run.evidence.expires_at}`
+    : "Evidence is not sealed.";
+}
+$("refreshRun").onclick=()=>refreshRun().catch(error=>show({error:String(error)}));
+async function loadFindings() {
+  const data=await api(`/v1/organizations/${state.org.id}/projects/${state.project.id}/findings`);
+  $("findings").innerHTML="";
+  for (const finding of data.findings) {
+    const element=document.createElement("div"); element.className="finding";
+    element.innerHTML=`<strong>${finding.title}</strong> [${finding.status}]<br>
+      severity=${finding.severity} regression=${finding.regression_state||"new"}<br>
+      <button data-status="assigned">Assign</button><button data-status="suppressed">Suppress</button>
+      <button data-status="accepted">Accept</button><button data-status="remediated">Remediate</button>
+      <button data-status="verified">Verify</button>`;
+    element.querySelectorAll("button").forEach(button=>button.onclick=async()=>{
+      await api(`/v1/organizations/${state.org.id}/findings/${finding.id}`, {
+        method:"PATCH",body:JSON.stringify({status:button.dataset.status,assignee:$("user").value,note:"Updated from beta console"})
+      }); await loadFindings();
+    });
+    $("findings").appendChild(element);
+  }
+  if (!data.findings.length) $("findings").textContent="No findings.";
+}
+$("releaseGate").onclick=async()=>{
+  try {
+    const result=await api(`/v1/organizations/${state.org.id}/release-gates`, {
+      method:"POST",body:JSON.stringify({
+        suite_name:"private-beta-core",suite_revision_id:state.suite.suite_revision_id,
+        agent_version_id:state.agent.agent_version_id,behave_securely:true,
+        provider:"none",publish:false,
+        policy_revision_id:state.policy.policy_revision_id
+      })
+    }); show(result);
+  } catch(error) { show({error:String(error)}); }
+};
+$("exportRun").onclick=async()=>{
+  if (!state.runId) return show({error:"Run a suite first"});
+  try {
+    const result=await api(`/v1/organizations/${state.org.id}/runs/${state.runId}/export`);
+    $("evidence").textContent=`signature=${result.signature}\nobject=${result.object_uri}\nformats=JSON, SARIF, HTML, PDF`;
+    show(result);
+  } catch(error) { show({error:String(error)}); }
+};
+fetch("/v1/auth/config").then(r=>r.json()).then(config=>{
+  if(config.oidc_enabled) $("timeline").textContent=`OIDC issuer: ${config.issuer}. Provide a partner bearer token.`;
+});
+</script>
 </body>
 </html>

@@ -69,6 +69,27 @@ In addition to lab scan adapters, the app exposes `/v1` for AI agent security va
 
 See `docs/product/README.md`.
 
+### Private Beta run flow
+
+```text
+OIDC user / CI
+  -> create immutable agent + suite + policy revisions
+  -> POST /v1/organizations/{org}/runs (202)
+  -> Temporal EvaluationWorkflow
+  -> short-lived Ed25519 run capability
+  -> ordered, idempotent normalized event batches
+  -> redact before PostgreSQL/S3 persistence
+  -> deterministic scenario assertions
+  -> policy + expiring exception evaluation
+  -> Ed25519-signed JSON/SARIF/HTML/PDF evidence
+  -> GitHub/GitLab release status
+```
+
+PostgreSQL RLS applies `USING` and `WITH CHECK` to tenant-owned tables. The API
+sets `app.organization_id` for every organization-scoped transaction. Hosted
+beta requires Temporal Cloud and disables both development authentication and
+the local synchronous workflow fallback.
+
 ## Lab Targets
 
 - OWASP Juice Shop at `http://127.0.0.1:3000`

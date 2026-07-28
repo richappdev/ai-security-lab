@@ -45,6 +45,52 @@ class EvidenceStore:
             return self._put_minio(key, body)
         return self._put_local(key, body)
 
+    def put_bytes(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        run_id: str,
+        name: str,
+        body: bytes,
+        content_type: str,
+    ) -> str:
+        key = f"{organization_id}/{project_id}/{run_id}/{name}"
+        if self.endpoint:
+            self.ensure_bucket()
+            client = self._client()
+            client.put_object(
+                Bucket=self.bucket,
+                Key=key,
+                Body=body,
+                ContentType=content_type,
+            )
+            return f"s3://{self.bucket}/{key}"
+        return self._put_local(key, body)
+
+    def delete_run(self, *, organization_id: str, project_id: str, run_id: str) -> int:
+        prefix = f"{organization_id}/{project_id}/{run_id}/"
+        if self.endpoint:
+            client = self._client()
+            listed = client.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
+            objects = [{"Key": item["Key"]} for item in listed.get("Contents", [])]
+            if objects:
+                client.delete_objects(Bucket=self.bucket, Delete={"Objects": objects})
+            return len(objects)
+        directory = self.root / organization_id / project_id / run_id
+        if not directory.exists():
+            return 0
+        files = [path for path in directory.rglob("*") if path.is_file()]
+        for path in files:
+            path.unlink()
+        for path in sorted(
+            [item for item in directory.rglob("*") if item.is_dir()],
+            reverse=True,
+        ):
+            path.rmdir()
+        directory.rmdir()
+        return len(files)
+
     def get_json(
         self,
         *,

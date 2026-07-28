@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from jose import JWTError, jwt
 from jose.backends import RSAKey
 from sqlalchemy.orm import Session
 
-from persistence import SessionLocal, init_db, make_engine
+from persistence import SessionLocal, init_db, is_postgres, make_engine
+from sqlalchemy import text
 from persistence.repositories import AuthorizationError, Principal, resolve_principal
 
 
@@ -24,6 +25,7 @@ class AuthContext:
 
 
 _jwks_cache: dict[str, Any] | None = None
+_oidc_metadata_cache: dict[str, Any] | None = None
 _engine = None
 
 
@@ -31,22 +33,44 @@ def get_engine():
     global _engine
     if _engine is None:
         _engine = make_engine()
-        init_db(_engine)
+        if os.environ.get("DEPLOYMENT_ENV", "local").lower() in {"beta", "production"}:
+            # Hosted environments are migrated explicitly with Alembic; silently
+            # creating an unprotected schema would bypass migration-managed RLS.
+            SessionLocal.configure(bind=_engine)
+        else:
+            init_db(_engine)
     return _engine
 
 
 def reset_engine_for_tests(engine) -> None:
     global _engine
     global _jwks_cache
+    global _oidc_metadata_cache
     _engine = engine
     _jwks_cache = None
+    _oidc_metadata_cache = None
     init_db(engine)
 
 
-def get_db() -> Session:
+def _organization_from_path(request: Request) -> str | None:
+    parts = [part for part in request.url.path.split("/") if part]
+    try:
+        marker = parts.index("organizations")
+        return parts[marker + 1]
+    except (ValueError, IndexError):
+        return None
+
+
+def get_db(request: Request) -> Session:
     get_engine()
     session = SessionLocal()
     try:
+        organization_id = _organization_from_path(request)
+        if organization_id and is_postgres(str(session.get_bind().url)):
+            session.execute(
+                text("SELECT set_config('app.organization_id', :oid, true)"),
+                {"oid": organization_id},
+            )
         yield session
         session.commit()
     except Exception:
@@ -73,12 +97,26 @@ def auth_config() -> dict[str, Any]:
         "allow_dev_auth": allow_dev_auth(),
         "issuer": issuer or None,
         "audience": os.environ.get("OIDC_AUDIENCE") or None,
-        "jwks_url": os.environ.get("OIDC_JWKS_URL")
-        or (f"{issuer}/protocol/openid-connect/certs" if issuer else None),
-        "token_url": f"{issuer}/protocol/openid-connect/token" if issuer else None,
-        "auth_url": f"{issuer}/protocol/openid-connect/auth" if issuer else None,
+        "discovery_url": f"{issuer}/.well-known/openid-configuration" if issuer else None,
+        "jwks_url": os.environ.get("OIDC_JWKS_URL"),
+        "token_url": os.environ.get("OIDC_TOKEN_URL"),
+        "auth_url": os.environ.get("OIDC_AUTH_URL"),
         "client_id": os.environ.get("OIDC_CLIENT_ID", "aisec-ui"),
     }
+
+
+def _load_oidc_metadata() -> dict[str, Any]:
+    global _oidc_metadata_cache
+    if _oidc_metadata_cache is not None:
+        return _oidc_metadata_cache
+    issuer = os.environ["OIDC_ISSUER"].rstrip("/")
+    response = httpx.get(f"{issuer}/.well-known/openid-configuration", timeout=10.0)
+    response.raise_for_status()
+    metadata = response.json()
+    if metadata.get("issuer", "").rstrip("/") != issuer:
+        raise HTTPException(status_code=401, detail="OIDC discovery issuer mismatch")
+    _oidc_metadata_cache = metadata
+    return metadata
 
 
 def _load_jwks() -> dict[str, Any]:
@@ -86,7 +124,9 @@ def _load_jwks() -> dict[str, Any]:
     if _jwks_cache is not None:
         return _jwks_cache
     issuer = os.environ["OIDC_ISSUER"].rstrip("/")
-    jwks_url = os.environ.get("OIDC_JWKS_URL", f"{issuer}/protocol/openid-connect/certs")
+    jwks_url = os.environ.get("OIDC_JWKS_URL")
+    if not jwks_url:
+        jwks_url = str(_load_oidc_metadata()["jwks_uri"])
     response = httpx.get(jwks_url, timeout=10.0)
     response.raise_for_status()
     _jwks_cache = response.json()
@@ -97,6 +137,13 @@ def _rsa_key_for_token(token: str):
     jwks = _load_jwks()
     header = jwt.get_unverified_header(token)
     kid = header.get("kid")
+    allowed_algorithms = {
+        value.strip()
+        for value in os.environ.get("OIDC_ALLOWED_ALGORITHMS", "RS256").split(",")
+        if value.strip()
+    }
+    if header.get("alg") not in allowed_algorithms:
+        raise KeyError("token signing algorithm is not allowed")
     for key_data in jwks.get("keys", []):
         if kid is None or key_data.get("kid") == kid:
             return RSAKey(key_data, algorithm=header.get("alg", "RS256"))

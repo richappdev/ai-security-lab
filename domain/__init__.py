@@ -37,6 +37,8 @@ class ScenarioStatus(str, Enum):
 class RunStatus(str, Enum):
     QUEUED = "queued"
     RUNNING = "running"
+    EVALUATING = "evaluating"
+    SEALING = "sealing"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCEL_REQUESTED = "cancel_requested"
@@ -78,3 +80,22 @@ class EventType(str, Enum):
     COST_TICK = "cost.tick"
     CANCEL_SIGNAL = "cancel.signal"
     SCOPE_CHANGE = "scope.change"
+
+
+class ExecutionMode(str, Enum):
+    SYNTHETIC_LOCAL = "synthetic_local"
+    EVENT_API = "event_api"
+
+
+class ExceptionStatus(str, Enum):
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    REVOKED = "revoked"
+
+
+class SuiteRunStatus(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"

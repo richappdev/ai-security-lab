@@ -258,6 +258,15 @@ Completed recently:
 - Close-and-pivot smoke (2026-07-26): passive cookies/forms APIs completed against Juice Shop + DVWA with four completed runs and eight matching audit records; local MVP declared complete.
 - Product Core (2026-07-26): domain/persistence/`/v1`, eight deterministic scenarios, synthetic agent, evidence manifests, two-org isolation tests; Private Beta + Enterprise foundation modules. Verification: 119 tests run, 17 skipped, OK.
 - Private Beta hardening (2026-07-26): Keycloak realm import, durable capability runs, signed SARIF/JSON evidence export, release-gate dry-run/publish, findings triage UI/API. Verification: 126 tests run, 17 skipped, OK.
+- 90-day Private Beta implementation (2026-07-28): immutable agent/suite/policy
+  revisions, persisted suite runs and regression scoring, Alembic-managed
+  PostgreSQL RLS, project RBAC, Temporal Cloud workflow definitions,
+  framework-neutral ordered/idempotent event ingestion, Ed25519-signed run
+  capabilities and evidence, redaction, retention/purge, JSON/SARIF/HTML/PDF
+  export, expiring exceptions, encrypted CI installations, isolated Docker
+  launcher, telemetry, beta UI, operational runbooks, PostgreSQL CI, and
+  Temporal integration tests. Verification: 142 tests run locally, 3
+  environment-dependent tests skipped, OK.
 
 ## Active Cancellation Boundary
 

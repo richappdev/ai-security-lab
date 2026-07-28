@@ -120,6 +120,11 @@ services:
       ALLOW_DEV_AUTH: ${ALLOW_DEV_AUTH:-true}
       USE_DURABLE_RUNS: ${USE_DURABLE_RUNS:-true}
       TEMPORAL_HOST: ${TEMPORAL_HOST:-}
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-agent-security-evaluations}
+      TEMPORAL_TLS: ${TEMPORAL_TLS:-false}
+      ALLOW_LEGACY_SYNC_RUNS: ${ALLOW_LEGACY_SYNC_RUNS:-true}
       EVIDENCE_SIGNING_KEY: ${EVIDENCE_SIGNING_KEY:-local-dev-evidence-key}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
       MINIO_BUCKET: ${MINIO_BUCKET:-evidence}
@@ -140,6 +145,30 @@ services:
         condition: service_started
       dvwa:
         condition: service_started
+
+  evaluation-worker:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    command: ["python", "-m", "workers.main"]
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    environment:
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal:7233}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-agent-security-evaluations}
+      TEMPORAL_TLS: ${TEMPORAL_TLS:-false}
+    networks:
+      - lab_net
+    profiles:
+      - beta
+    depends_on:
+      - temporal
 
   juice-shop:
     image: bkimminich/juice-shop:latest

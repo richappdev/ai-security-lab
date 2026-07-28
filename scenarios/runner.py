@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from typing import Any
+from base64 import b64decode
 
 from sqlalchemy.orm import Session
 
 from agents.adapters.synthetic import simulate
 from domain import GateResult, RunStatus
 from evidence import build_export_bundle, build_manifest, canonical_json
+from evidence.redaction import redact_events
 from evidence.store import EvidenceStore
 from persistence.repositories import (
     Principal,
@@ -60,11 +62,29 @@ def _store_evidence_blobs(
         name="manifest.json",
         payload=manifest,
     )
+    html_uri = store.put_bytes(
+        organization_id=organization_id,
+        project_id=project_id,
+        run_id=run_id,
+        name="report.html",
+        body=bundle["html"].encode("utf-8"),
+        content_type="text/html; charset=utf-8",
+    )
+    pdf_uri = store.put_bytes(
+        organization_id=organization_id,
+        project_id=project_id,
+        run_id=run_id,
+        name="report.pdf",
+        body=b64decode(bundle["pdf_base64"]),
+        content_type="application/pdf",
+    )
     return {
         "events": events_uri,
         "sarif": sarif_uri,
         "bundle": bundle_uri,
         "manifest": manifest_uri,
+        "html": html_uri,
+        "pdf": pdf_uri,
     }
 
 
@@ -84,6 +104,7 @@ def _run_scenario_body(
         allowed_tools=list(agent.allowed_tools or []),
         behave_securely=behave_securely,
     )
+    events = redact_events(events)
     if capability is not None:
         # Synthetic evaluations assert policy outcomes; expiry/ceilings still enforced.
         capability.revalidate()

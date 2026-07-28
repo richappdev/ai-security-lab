@@ -8,4 +8,5 @@
 - [Scenario contract](scenario-contract.md)
 - [Evidence manifest](evidence-manifest.md)
 - [Private Beta notes](private-beta.md)
+- [Private Beta operations](private-beta-operations.md)
 - [Enterprise readiness notes](enterprise.md)
