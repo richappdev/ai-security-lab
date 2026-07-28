@@ -35,8 +35,8 @@ jobs:
       - name: Validate Compose file
         run: docker compose config
 
-      - name: Build security-app image
-        run: docker compose build security-app
+      - name: Build application and worker images
+        run: docker compose build security-app evaluation-worker
 
       - name: Smoke test image
         run: |
@@ -57,6 +57,28 @@ jobs:
           echo "Health check timed out"
           docker logs security-app-ci || true
           exit 1
+
+      - name: Run beta-exit workflow inside image
+        run: |
+          docker exec security-app-ci python -m certification.beta_exit \
+            --base-url http://127.0.0.1:8000 \
+            --dev-user docker-ci
+
+      - name: Verify worker isolation imports
+        run: |
+          docker run --rm \
+            --user 65532:65532 \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --network none \
+            --cpus 1 \
+            --memory 512m \
+            --pids-limit 128 \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --entrypoint python \
+            ai-security-lab-evaluation-worker \
+            -c "from workers.workflows import EvaluationWorkflow, SuiteWorkflow; assert EvaluationWorkflow and SuiteWorkflow"
 
       - name: Stop smoke container
         if: always()

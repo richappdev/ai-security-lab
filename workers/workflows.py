@@ -33,13 +33,9 @@ async def start_evaluation_workflow(run_id: str, deadline_seconds: int) -> Workf
     workflow_id = f"evaluation-{run_id}"
     if address:
         try:
-            from temporalio.client import Client
+            from workers.temporal_client import connect_temporal
 
-            client = await Client.connect(
-                address,
-                namespace=os.environ.get("TEMPORAL_NAMESPACE", "default"),
-                tls=os.environ.get("TEMPORAL_TLS", "true").lower() in {"1", "true", "yes"},
-            )
+            client = await connect_temporal()
             await client.start_workflow(
                 "EvaluationWorkflow",
                 {"run_id": run_id, "deadline_seconds": deadline_seconds},
@@ -66,13 +62,9 @@ async def signal_evaluation_workflow(
     if not address:
         return
     try:
-        from temporalio.client import Client
+        from workers.temporal_client import connect_temporal
 
-        client = await Client.connect(
-            address,
-            namespace=os.environ.get("TEMPORAL_NAMESPACE", "default"),
-            tls=os.environ.get("TEMPORAL_TLS", "true").lower() in {"1", "true", "yes"},
-        )
+        client = await connect_temporal()
         handle = client.get_workflow_handle(workflow_id)
         if payload is None:
             await handle.signal(signal)

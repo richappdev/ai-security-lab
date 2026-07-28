@@ -1,0 +1,112 @@
+name: Partner Beta Certification
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: HTTPS URL of the deployed beta control plane
+        required: true
+        type: string
+      profile:
+        description: Deployment profile to certify
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - production
+      ci_provider:
+        description: Installed CI provider
+        required: true
+        type: choice
+        options:
+          - github
+          - gitlab
+      organization_id:
+        description: Organization that owns the CI installation
+        required: true
+        type: string
+      integration_installation_id:
+        description: Organization-scoped integration installation ID
+        required: true
+        type: string
+      head_sha:
+        description: Commit SHA that receives fail and pass checks
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    environment: partner-beta
+    timeout-minutes: 30
+    env:
+      DEPLOYMENT_ENV: ${{ inputs.profile }}
+      ALLOW_DEV_AUTH: "false"
+      ALLOW_LEGACY_SYNC_RUNS: "false"
+      DATABASE_URL: ${{ secrets.BETA_DATABASE_URL }}
+      OIDC_ISSUER: ${{ secrets.BETA_OIDC_ISSUER }}
+      OIDC_AUDIENCE: ${{ secrets.BETA_OIDC_AUDIENCE }}
+      TEMPORAL_ADDRESS: ${{ secrets.BETA_TEMPORAL_ADDRESS }}
+      TEMPORAL_NAMESPACE: ${{ secrets.BETA_TEMPORAL_NAMESPACE }}
+      TEMPORAL_TLS: "true"
+      TEMPORAL_API_KEY: ${{ secrets.BETA_TEMPORAL_API_KEY }}
+      TEMPORAL_CLIENT_CERT: ${{ secrets.BETA_TEMPORAL_CLIENT_CERT }}
+      TEMPORAL_CLIENT_KEY: ${{ secrets.BETA_TEMPORAL_CLIENT_KEY }}
+      MINIO_ENDPOINT: ${{ secrets.BETA_S3_ENDPOINT }}
+      MINIO_BUCKET: ${{ secrets.BETA_S3_BUCKET }}
+      MINIO_ACCESS_KEY: ${{ secrets.BETA_S3_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.BETA_S3_SECRET_KEY }}
+      EVIDENCE_ED25519_PRIVATE_KEY: ${{ secrets.BETA_EVIDENCE_PRIVATE_KEY }}
+      EVIDENCE_SIGNING_KEY_ID: ${{ secrets.BETA_EVIDENCE_KEY_ID }}
+      CAPABILITY_ED25519_PRIVATE_KEY: ${{ secrets.BETA_CAPABILITY_PRIVATE_KEY }}
+      CAPABILITY_SIGNING_KEY_ID: ${{ secrets.BETA_CAPABILITY_KEY_ID }}
+      INTEGRATION_ENCRYPTION_KEY: ${{ secrets.BETA_INTEGRATION_ENCRYPTION_KEY }}
+      OPERATIONS_TOKEN: ${{ secrets.BETA_OPERATIONS_TOKEN }}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.BETA_OTLP_ENDPOINT }}
+      CI_INTEGRATION_PROVIDER: ${{ inputs.ci_provider }}
+      BETA_ORGANIZATION_ID: ${{ inputs.organization_id }}
+      CI_INTEGRATION_INSTALLATION_ID: ${{ inputs.integration_installation_id }}
+      CI_HEAD_SHA: ${{ inputs.head_sha }}
+      BETA_BASE_URL: ${{ inputs.base_url }}
+      BETA_ACCESS_TOKEN: ${{ secrets.BETA_ACCESS_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create report directory
+        run: mkdir -p certification-reports
+
+      - name: Certify configuration and managed dependencies
+        run: |
+          python -m certification.readiness \
+            --profile "${{ inputs.profile }}" \
+            --live \
+            --base-url "${{ inputs.base_url }}" \
+            --output certification-reports/readiness.json
+
+      - name: Execute fail-remediate-pass release workflow
+        run: |
+          python -m certification.beta_exit \
+            --provider "${{ inputs.ci_provider }}" \
+            --output certification-reports/beta-exit.json
+
+      - name: Upload certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-certification-${{ github.run_id }}
+          path: certification-reports
+          if-no-files-found: warn
+          retention-days: 30

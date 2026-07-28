@@ -1,0 +1,15 @@
+{
+  "scenario_reproducibility_rate": 0.95,
+  "evidence_completeness_rate": 1.0,
+  "cross_tenant_denial_rate": 1.0,
+  "cancellation_p95_seconds": 9.9,
+  "worker_failure_recovery_succeeded": true,
+  "seeded_secret_leaks": 0,
+  "fail_remediate_pass_completed": true,
+  "time_to_first_useful_evaluation_minutes": null,
+  "median_release_validation_minutes": null,
+  "mean_remediation_hours": null,
+  "release_decision_usage_rate": null,
+  "false_positive_rate": null,
+  "cost_per_completed_evaluation": null
+}

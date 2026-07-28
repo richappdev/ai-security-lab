@@ -160,6 +160,23 @@ persisted regression comparisons, expiring exceptions, and encrypted CI installa
 See [`docs/product/private-beta-operations.md`](docs/product/private-beta-operations.md)
 for deployment, backup/restore, key rotation, incident response, and rollout gates.
 
+## Partner beta certification
+
+The post-implementation gate is executable:
+
+```powershell
+python -m certification.readiness --profile beta
+python -m certification.readiness --profile beta --live --base-url $env:BETA_BASE_URL
+python -m certification.beta_exit --provider $env:CI_INTEGRATION_PROVIDER
+python -m certification.scorecard deploy/beta/pilot-metrics.example.json
+```
+
+The live gate validates managed PostgreSQL/Alembic/RLS, OIDC, Temporal Cloud,
+S3, API, telemetry, signing, and CI configuration as one environment. The
+beta-exit command proves fail, remediation, unchanged-suite pass,
+cross-tenant denial, redaction, cancellation latency, CI enforcement, and
+offline signed-evidence verification. See `deploy/beta/README.md`.
+
 - Test only the targets in `targets.allowlist`.
 - Keep `.env` bind addresses set to `127.0.0.1`.
 - Do not point scanning, brute force, exploit, DDoS, or lateral-movement modules at public IPs or third-party domains.

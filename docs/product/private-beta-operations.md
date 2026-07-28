@@ -10,6 +10,16 @@
 
 Application startup refuses beta or production mode when a required safety setting is absent.
 
+Before promotion, run the stricter combined gate:
+
+```text
+python -m certification.readiness --profile beta --live --base-url <deployment>
+python -m certification.beta_exit --provider <github|gitlab>
+```
+
+The protected `Partner Beta Certification` workflow runs these commands and
+retains their JSON reports for 30 days.
+
 ## Deployment and rollback
 
 1. Back up PostgreSQL and enable bucket versioning.
@@ -58,6 +68,11 @@ Verify an exported JSON bundle with `python -m evidence.verify_cli path/to/evide
 3. **3–5 partners:** at least 95% deterministic reproducibility, complete evidence for every gate, and successful fail/remediate/rerun/pass workflows.
 
 ## Alerts
+
+Evaluate rollout thresholds with
+`python -m certification.scorecard <pilot-metrics.json>`. See
+`design-partner-pilot.md` for onboarding, fault drills, measurements, and stop
+conditions.
 
 - Excess queue latency, run duration, or cancellation latency.
 - Worker heartbeat loss, retry exhaustion, or recovery failure.

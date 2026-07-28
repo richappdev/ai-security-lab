@@ -79,22 +79,47 @@ def validate_beta_configuration() -> None:
     missing = []
     if os.environ.get("ALLOW_DEV_AUTH", "false").lower() in {"1", "true", "yes", "on"}:
         missing.append("ALLOW_DEV_AUTH must be false")
+    if os.environ.get("ALLOW_LEGACY_SYNC_RUNS", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        missing.append("ALLOW_LEGACY_SYNC_RUNS must be false")
     for name in (
         "DATABASE_URL",
         "OIDC_ISSUER",
         "OIDC_AUDIENCE",
         "TEMPORAL_ADDRESS",
         "MINIO_ENDPOINT",
+        "MINIO_BUCKET",
         "MINIO_ACCESS_KEY",
         "MINIO_SECRET_KEY",
         "EVIDENCE_ED25519_PRIVATE_KEY",
+        "EVIDENCE_SIGNING_KEY_ID",
         "CAPABILITY_ED25519_PRIVATE_KEY",
+        "CAPABILITY_SIGNING_KEY_ID",
         "INTEGRATION_ENCRYPTION_KEY",
         "OPERATIONS_TOKEN",
+        "OTEL_EXPORTER_OTLP_ENDPOINT",
     ):
         if not os.environ.get(name):
             missing.append(name)
     if not os.environ.get("DATABASE_URL", "").startswith("postgresql"):
         missing.append("DATABASE_URL must use PostgreSQL")
+    if os.environ.get("TEMPORAL_TLS", "false").lower() not in {"1", "true", "yes", "on"}:
+        missing.append("TEMPORAL_TLS must be true")
+    if not (
+        os.environ.get("TEMPORAL_API_KEY")
+        or (
+            os.environ.get("TEMPORAL_CLIENT_CERT")
+            and os.environ.get("TEMPORAL_CLIENT_KEY")
+        )
+    ):
+        missing.append("Temporal Cloud authentication is required")
+    if os.environ.get("EVIDENCE_ED25519_PRIVATE_KEY") == os.environ.get(
+        "CAPABILITY_ED25519_PRIVATE_KEY"
+    ):
+        missing.append("evidence and capability signing keys must be distinct")
     if missing:
         raise RuntimeError("unsafe beta configuration: " + ", ".join(missing))
