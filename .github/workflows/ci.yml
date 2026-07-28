@@ -62,7 +62,8 @@ jobs:
         run: |
           docker exec security-app-ci python -m certification.beta_exit \
             --base-url http://127.0.0.1:8000 \
-            --dev-user docker-ci
+            --dev-user docker-ci \
+            --provider none
 
       - name: Verify worker isolation imports
         run: |

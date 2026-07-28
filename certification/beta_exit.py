@@ -424,7 +424,7 @@ def main() -> None:
     parser.add_argument(
         "--provider",
         choices=("none", "github", "gitlab"),
-        default=os.environ.get("CI_INTEGRATION_PROVIDER", "none"),
+        default=os.environ.get("CI_INTEGRATION_PROVIDER") or "none",
     )
     parser.add_argument(
         "--organization-id",
