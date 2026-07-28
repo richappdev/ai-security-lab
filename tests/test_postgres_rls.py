@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from uuid import uuid4
 
 from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
@@ -56,8 +57,13 @@ class PostgresRlsTests(unittest.TestCase):
         cls.admin_engine.dispose()
 
     def _organization(self, name: str) -> str:
+        unique_name = f"{name}-{uuid4().hex[:10]}"
         with self.sessions() as session:
-            organization = create_organization(session, name, f"{name}-owner")
+            organization = create_organization(
+                session,
+                unique_name,
+                f"{unique_name}-owner",
+            )
             session.commit()
             return organization.id
 

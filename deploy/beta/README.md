@@ -11,6 +11,22 @@ Run the static, fail-closed configuration gate:
 python -m certification.readiness --profile beta
 ```
 
+Run the PostgreSQL migration and RLS suite entirely inside disposable Docker
+services:
+
+```powershell
+docker compose --profile test up `
+  --build `
+  --abort-on-container-exit `
+  --exit-code-from postgres-test `
+  postgres-test
+docker compose --profile test rm --stop --force postgres-test postgres-test-db
+```
+
+The test database uses a container-local `tmpfs`; it does not mount or modify
+the development PostgreSQL volume. Cleanup targets only the two test services,
+so existing lab services remain running.
+
 Probe PostgreSQL/Alembic/RLS, OIDC discovery and JWKS, Temporal Cloud, S3 bucket
 versioning/encryption, the API contract, and the operations endpoint:
 

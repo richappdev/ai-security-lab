@@ -171,6 +171,14 @@ python -m certification.beta_exit --provider $env:CI_INTEGRATION_PROVIDER
 python -m certification.scorecard deploy/beta/pilot-metrics.example.json
 ```
 
+PostgreSQL migrations and RLS can be tested without host dependencies or the
+development database:
+
+```powershell
+docker compose --profile test up --build --abort-on-container-exit --exit-code-from postgres-test postgres-test
+docker compose --profile test rm --stop --force postgres-test postgres-test-db
+```
+
 The live gate validates managed PostgreSQL/Alembic/RLS, OIDC, Temporal Cloud,
 S3, API, telemetry, signing, and CI configuration as one environment. The
 beta-exit command proves fail, remediation, unchanged-suite pass,

@@ -21,6 +21,42 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-test-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aisec_test
+      POSTGRES_PASSWORD: aisec_test
+      POSTGRES_DB: aisec_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - lab_net
+    profiles:
+      - test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aisec_test -d aisec_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  postgres-test:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    command: ["python", "-m", "certification.postgres_test"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://aisec_test:aisec_test@postgres-test-db:5432/aisec_test
+      POSTGRES_TEST_URL: postgresql+psycopg://aisec_test:aisec_test@postgres-test-db:5432/aisec_test
+      DEPLOYMENT_ENV: test
+      ALLOW_DEV_AUTH: "true"
+    networks:
+      - lab_net
+    profiles:
+      - test
+    depends_on:
+      postgres-test-db:
+        condition: service_healthy
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: lab-keycloak
